@@ -3,49 +3,75 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My First Website</title>
+    <title>How to Make a Website</title>
 
     <style>
         body {
+            margin: 0;
+            padding: 0;
             font-family: Arial, sans-serif;
-            background: #f7f7f7;
-            padding: 40px;
-            text-align: center;
-        }
-
-        h1 {
+            background: #f3f3f3;
             color: #333;
         }
 
-        p {
-            font-size: 18px;
-            color: #555;
-        }
-
-        .button {
-            display: inline-block;
-            padding: 12px 20px;
+        header {
             background: #4CAF50;
+            padding: 20px;
+            text-align: center;
             color: white;
-            border-radius: 8px;
-            margin-top: 20px;
-            text-decoration: none;
+            font-size: 28px;
             font-weight: bold;
         }
 
-        .button:hover {
-            background: #45a049;
+        .content {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        h2 {
+            color: #4CAF50;
+        }
+
+        code {
+            background: #eee;
+            padding: 5px 8px;
+            border-radius: 6px;
+            font-size: 16px;
+        }
+
+        .code-block {
+            background: #272822;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 10px;
+            overflow-x: auto;
+            margin-bottom: 20px;
+            font-family: Consolas, monospace;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            color: #777;
         }
     </style>
 </head>
 
 <body>
 
-    <h1>Welcome to My Website 🎉</h1>
+<header>
+    How to Make a Website
+</header>
 
-    <p>This is my first website created using GitHub Pages!</p>
+<div class="content">
 
-    <a class="button" href="https://github.com/KyraHeisler">Visit my GitHub</a>
+    <h2>1. Create an HTML file</h2>
+    <p>All websites start with an <strong>HTML file</strong>. HTML tells the browser what to show on the page.</p>
+    <p>Your file should be named <code>index.html</code>.</p>
 
-</body>
-</html>
+    <h2>2. Add basic structure</
