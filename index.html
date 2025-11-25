@@ -3,55 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Study Schedule Maker</title>
+    <title>Advanced Study Schedule Maker</title>
 
     <style>
         body {
             font-family: Arial, sans-serif;
-            background: #eef2f7;
+            background: #e6ecf3;
             margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
+            padding: 20px;
         }
 
         .container {
-            width: 450px;
-            background: white;
-            padding: 30px;
+            background: #fff;
+            padding: 25px;
+            max-width: 800px;
+            margin: auto;
             border-radius: 12px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.1);
         }
 
         h1 {
             text-align: center;
-            color: #333;
+            margin-bottom: 25px;
         }
 
         label {
             font-weight: bold;
-            display: block;
             margin-top: 15px;
+            display: block;
         }
 
-        textarea, input {
+        input, textarea, select {
             width: 100%;
             padding: 10px;
             margin-top: 5px;
-            border: 1px solid #ccc;
             border-radius: 8px;
+            border: 1px solid #ccc;
         }
 
         button {
+            margin-top: 20px;
             width: 100%;
             padding: 12px;
             background: #4a90e2;
-            border: none;
             color: white;
             font-size: 16px;
-            margin-top: 20px;
+            border: none;
             border-radius: 8px;
             cursor: pointer;
         }
@@ -60,72 +57,136 @@
             background: #357ABD;
         }
 
-        .output {
-            margin-top: 20px;
-            padding: 15px;
-            background: #f6f8fa;
-            border-radius: 8px;
-            border-left: 5px solid #4a90e2;
+        .schedule {
+            margin-top: 30px;
+            overflow-x: auto;
         }
 
-        .schedule-item {
-            margin-bottom: 10px;
-            line-height: 1.5;
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        th, td {
+            border: 1px solid #bbb;
+            padding: 10px;
+            text-align: center;
+        }
+
+        th {
+            background: #4a90e2;
+            color: white;
+        }
+
+        .time-cell {
+            background: #f5f7fa;
+            font-weight: bold;
         }
     </style>
 </head>
-
 <body>
-    <div class="container">
-        <h1>Study Schedule Maker</h1>
 
-        <label>Subjects (separated by commas):</label>
-        <textarea id="subjects" placeholder="Math, Science, History"></textarea>
+<div class="container">
+    <h1>Advanced Study Schedule Maker</h1>
 
-        <label>Total hours available per day:</label>
-        <input id="hours" type="number" placeholder="Example: 4">
+    <label>Subjects (comma-separated):</label>
+    <textarea id="subjects" placeholder="Math, Science, History, English"></textarea>
 
-        <button onclick="createSchedule()">Generate Study Schedule</button>
+    <label>Total Hours Per Day:</label>
+    <input type="number" id="hours" placeholder="Example: 4">
 
-        <div class="output" id="output" style="display:none;"></div>
-    </div>
+    <label>Start Time (24-hour format):</label>
+    <input type="time" id="startTime" value="16:00"> <!-- Default 4 PM -->
 
-    <script>
-        function createSchedule() {
-            const subjectsInput = document.getElementById("subjects").value;
-            const hoursInput = Number(document.getElementById("hours").value);
-            const output = document.getElementById("output");
+    <label>Length of Each Study Session (minutes):</label>
+    <input type="number" id="sessionLength" value="60">
 
-            // Process subjects
-            const subjects = subjectsInput
-                .split(",")
-                .map(s => s.trim())
-                .filter(s => s.length > 0);
+    <button onclick="generateSchedule()">Generate Schedule</button>
 
-            if (subjects.length === 0) {
-                output.style.display = "block";
-                output.innerHTML = "❗ Please enter at least one subject.";
-                return;
-            }
+    <div id="output" class="schedule"></div>
+</div>
 
-            if (hoursInput <= 0) {
-                output.style.display = "block";
-                output.innerHTML = "❗ Please enter a valid number of hours.";
-                return;
-            }
 
-            // Divide hours evenly
-            const hoursPerSubject = (hoursInput / subjects.length).toFixed(2);
+<script>
+function generateSchedule() {
+    const subjects = document.getElementById("subjects").value
+        .split(",")
+        .map(s => s.trim())
+        .filter(s => s.length > 0);
 
-            // Build schedule output
-            let html = "<h3>Your Daily Study Plan:</h3>";
-            subjects.forEach(sub => {
-                html += `<div class="schedule-item"><strong>${sub}</strong>: ${hoursPerSubject} hours</div>`;
-            });
+    const hours = Number(document.getElementById("hours").value);
+    const startTime = document.getElementById("startTime").value;
+    const sessionLength = Number(document.getElementById("sessionLength").value);
 
-            output.style.display = "block";
-            output.innerHTML = html;
+    const output = document.getElementById("output");
+
+    if (subjects.length === 0) {
+        output.innerHTML = "<p>Please enter at least one subject.</p>";
+        return;
+    }
+    if (hours <= 0) {
+        output.innerHTML = "<p>Please enter valid hours.</p>";
+        return;
+    }
+
+    // Convert start time
+    let [startHour, startMin] = startTime.split(":").map(Number);
+
+    // Calculate total sessions
+    const totalMinutes = hours * 60;
+    const sessions = Math.floor(totalMinutes / sessionLength);
+
+    // Build time slots
+    let schedule = [];
+    for (let i = 0; i < sessions; i++) {
+        let subject = subjects[i % subjects.length];
+
+        // Create time label
+        let endHour = startHour;
+        let endMin = startMin + sessionLength;
+
+        if (endMin >= 60) {
+            endHour += Math.floor(endMin / 60);
+            endMin = endMin % 60;
         }
-    </script>
+
+        let timeLabel =
+            `${String(startHour).padStart(2, '0')}:${String(startMin).padStart(2, '0')}` +
+            " - " +
+            `${String(endHour).padStart(2, '0')}:${String(endMin).padStart(2, '0')}`;
+
+        schedule.push({ time: timeLabel, subject: subject });
+
+        // Set next start time
+        startHour = endHour;
+        startMin = endMin;
+    }
+
+    // Build HTML table output
+    let html = `
+        <h2>Your Daily Study Schedule</h2>
+        <table>
+            <tr>
+                <th>Time</th>
+                <th>Subject</th>
+            </tr>
+    `;
+
+    schedule.forEach(slot => {
+        html += `
+            <tr>
+                <td class="time-cell">${slot.time}</td>
+                <td>${slot.subject}</td>
+            </tr>
+        `;
+    });
+
+    html += "</table>";
+
+    output.innerHTML = html;
+}
+</script>
+
 </body>
 </html>
