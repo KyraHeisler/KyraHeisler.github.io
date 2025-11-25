@@ -1,242 +1,140 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8" />
-<title>Web Game Studio (Roblox Style)</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
+<title>No-Code Game Creator</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
 <style>
-    body {
-        margin: 0;
-        display: flex;
-        height: 100vh;
-        font-family: Arial, sans-serif;
-        overflow: hidden;
-    }
+    body { margin:0; display:flex; height:100vh; font-family:Arial; overflow:hidden; }
 
-    /* Explorer (hierarchy) */
-    #explorer {
-        width: 250px;
-        background: #1e1f22;
-        color: white;
-        padding: 10px;
-        overflow-y: auto;
-        border-right: 2px solid #333;
+    #sidebar {
+        width:260px; background:#222; color:white; padding:15px;
+        overflow-y:auto; border-right:2px solid #444;
     }
-
-    .explorer-item {
-        padding: 6px;
-        background: #2a2c30;
-        margin-bottom: 5px;
-        cursor: pointer;
-        border-radius: 4px;
+    h2 { margin-top:0; }
+    select, button {
+        width:100%; padding:10px; margin-top:10px; border-radius:6px;
+        border:none; font-size:15px;
     }
-    .explorer-item:hover { background: #3b3d42; }
+    button { background:#4a90e2; color:white; cursor:pointer; }
+    button:hover { background:#357abd; }
 
-    /* Scene editor */
     #scene {
-        flex: 1;
-        background: #e5e9f0;
-        position: relative;
+        flex:1; background:#dfe6ee; position:relative;
     }
 
-    .object {
-        position: absolute;
-        cursor: pointer;
-        border: 2px solid transparent;
-    }
-    .selected {
-        border: 2px solid #ffb300;
+    .obj {
+        position:absolute;
+        border-radius:6px;
     }
 
-    /* Inspector */
-    #inspector {
-        width: 280px;
-        background: #f1f1f1;
-        padding: 10px;
-        overflow-y: auto;
-        border-left: 2px solid #ccc;
-    }
-
-    label { font-weight: bold; margin-top: 10px; display: block; }
-
-    input {
-        width: 100%;
-        padding: 6px;
-        margin-top: 4px;
-    }
-
-    /* Toolbar */
-    #toolbar {
-        width: 100%;
-        background: #3c3f44;
-        padding: 8px;
-        color: white;
-        display: flex;
-        gap: 10px;
-    }
-    #toolbar button {
-        background: #4a90e2;
-        border: none;
-        padding: 8px 12px;
-        border-radius: 6px;
-        color: white;
-        cursor: pointer;
-    }
-
-    #scriptEditor {
-        width: 100%;
-        height: 150px;
-        margin-top: 10px;
-        font-family: monospace;
-    }
+    .player { background:#00c853; }
+    .enemy { background:#d50000; }
+    .coin { background:#fdd835; border-radius:50%; }
+    .platform { background:#6d4c41; }
 </style>
 </head>
 <body>
 
-<!-- Explorer -->
-<div id="explorer">
-    <h3>Explorer</h3>
-    <button onclick="addPart()">Add Part</button>
-    <div id="explorerList"></div>
-</div>
+<div id="sidebar">
+    <h2>No-Code Game Maker</h2>
 
-<!-- Main Scene -->
-<div id="scene"></div>
+    <label>Object Type:</label>
+    <select id="objType">
+        <option value="player">Player</option>
+        <option value="enemy">Enemy</option>
+        <option value="coin">Coin</option>
+        <option value="platform">Platform</option>
+    </select>
 
-<!-- Inspector -->
-<div id="inspector">
-    <h3>Inspector</h3>
-    <div id="inspectorContent">Select an object.</div>
+    <label>Behavior:</label>
+    <select id="behavior">
+        <option value="none">None</option>
+        <option value="moveLeftRight">Move Left & Right</option>
+        <option value="moveUpDown">Move Up & Down</option>
+        <option value="patrol">Patrol</option>
+    </select>
 
-    <h4>Script</h4>
-    <textarea id="scriptEditor" placeholder="object.x += 1"></textarea>
-    <button onclick="applyScript()">Apply Script</button>
-
-    <hr>
-    <button onclick="playGame()">▶ Play</button>
+    <button onclick="playGame()">▶ Play Game</button>
     <button onclick="stopGame()">■ Stop</button>
 </div>
 
+<div id="scene"></div>
+
 <script>
-let objects = [];
-let selected = null;
-let playing = false;
-let interval = null;
-
 const scene = document.getElementById("scene");
-const explorerList = document.getElementById("explorerList");
-const inspector = document.getElementById("inspectorContent");
+let objects = [];
+let isPlaying = false;
+let gameInterval;
 
-function addPart() {
-    const id = "Part" + (objects.length + 1);
+// --- ADD OBJECTS BY CLICKING ---
+scene.addEventListener("click", (e) => {
+    if (isPlaying) return;
+
+    const type = document.getElementById("objType").value;
+    const behavior = document.getElementById("behavior").value;
+
+    let size = 40;
+    if (type === "platform") size = 120;
 
     const obj = {
-        id,
-        x: 100,
-        y: 100,
-        width: 60,
-        height: 60,
-        color: "#ff4444",
-        script: "",
-        el: null
+        type,
+        behavior,
+        x: e.offsetX,
+        y: e.offsetY,
+        width: size,
+        height: size,
+        dx: 2,
+        dy: 2,
+        el: document.createElement("div")
     };
 
-    const div = document.createElement("div");
-    div.className = "object";
-    div.style.width = obj.width + "px";
-    div.style.height = obj.height + "px";
-    div.style.background = obj.color;
-    div.style.left = obj.x + "px";
-    div.style.top = obj.y + "px";
-    div.onclick = () => selectObject(obj);
+    obj.el.classList.add("obj", type);
+    obj.el.style.width = obj.width + "px";
+    obj.el.style.height = obj.height + "px";
+    obj.el.style.left = obj.x + "px";
+    obj.el.style.top = obj.y + "px";
 
-    obj.el = div;
-    scene.appendChild(div);
+    scene.appendChild(obj.el);
     objects.push(obj);
+});
 
-    refreshExplorer();
-}
-
-function refreshExplorer() {
-    explorerList.innerHTML = "";
-    objects.forEach(o => {
-        const item = document.createElement("div");
-        item.className = "explorer-item";
-        item.innerText = o.id;
-        item.onclick = () => selectObject(o);
-        explorerList.appendChild(item);
-    });
-}
-
-function selectObject(obj) {
-    if (selected) selected.el.classList.remove("selected");
-    selected = obj;
-    selected.el.classList.add("selected");
-
-    inspector.innerHTML = `
-        <label>X</label>
-        <input type="number" id="propX" value="${obj.x}" onchange="updateProperties()">
-
-        <label>Y</label>
-        <input type="number" id="propY" value="${obj.y}" onchange="updateProperties()">
-
-        <label>Width</label>
-        <input type="number" id="propW" value="${obj.width}" onchange="updateProperties()">
-
-        <label>Height</label>
-        <input type="number" id="propH" value="${obj.height}" onchange="updateProperties()">
-
-        <label>Color</label>
-        <input type="color" id="propC" value="${obj.color}" onchange="updateProperties()">
-    `;
-
-    document.getElementById("scriptEditor").value = selected.script;
-}
-
-function updateProperties() {
-    if (!selected) return;
-
-    selected.x = Number(document.getElementById("propX").value);
-    selected.y = Number(document.getElementById("propY").value);
-    selected.width = Number(document.getElementById("propW").value);
-    selected.height = Number(document.getElementById("propH").value);
-    selected.color = document.getElementById("propC").value;
-
-    selected.el.style.left = selected.x + "px";
-    selected.el.style.top = selected.y + "px";
-    selected.el.style.width = selected.width + "px";
-    selected.el.style.height = selected.height + "px";
-    selected.el.style.background = selected.color;
-}
-
-function applyScript() {
-    if (!selected) return;
-    selected.script = document.getElementById("scriptEditor").value;
-}
-
+// --- PLAY THE GAME ---
 function playGame() {
-    if (playing) return;
-    playing = true;
+    if (isPlaying) return;
+    isPlaying = true;
 
-    interval = setInterval(() => {
+    gameInterval = setInterval(() => {
         objects.forEach(o => {
-            if (o.script.trim() !== "") {
-                try {
-                    eval(o.script);
-                    o.el.style.left = o.x + "px";
-                    o.el.style.top = o.y + "px";
-                } catch(e) {
-                    console.error("Script error:", e);
-                }
+            if (o.behavior === "moveLeftRight") {
+                o.x += o.dx;
+                if (o.x <= 0 || o.x + o.width >= scene.clientWidth) o.dx *= -1;
             }
+
+            if (o.behavior === "moveUpDown") {
+                o.y += o.dy;
+                if (o.y <= 0 || o.y + o.height >= scene.clientHeight) o.dy *= -1;
+            }
+
+            if (o.behavior === "patrol") {
+                o.x += o.dx;
+                o.y += o.dy;
+                if (o.x <= 0 || o.x + o.width >= scene.clientWidth) o.dx *= -1;
+                if (o.y <= 0 || o.y + o.height >= scene.clientHeight) o.dy *= -1;
+            }
+
+            // Update visuals
+            o.el.style.left = o.x + "px";
+            o.el.style.top = o.y + "px";
         });
-    }, 30);
+    }, 20);
 }
 
+// --- STOP THE GAME ---
 function stopGame() {
-    playing = false;
-    clearInterval(interval);
+    isPlaying = false;
+    clearInterval(gameInterval);
 }
 </script>
 
