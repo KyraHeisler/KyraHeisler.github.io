@@ -1,77 +1,80 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>How to Make a Website</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Random Name Generator</title>
 
     <style>
         body {
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
             margin: 0;
             padding: 0;
-            font-family: Arial, sans-serif;
-            background: #f3f3f3;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            text-align: center;
+            width: 350px;
+        }
+
+        h1 {
+            margin-bottom: 20px;
             color: #333;
         }
 
-        header {
-            background: #4CAF50;
-            padding: 20px;
-            text-align: center;
+        button {
+            background: #4a90e2;
             color: white;
-            font-size: 28px;
-            font-weight: bold;
-        }
-
-        .content {
-            max-width: 900px;
-            margin: 40px auto;
-            padding: 20px;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
-
-        h2 {
-            color: #4CAF50;
-        }
-
-        code {
-            background: #eee;
-            padding: 5px 8px;
-            border-radius: 6px;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
             font-size: 16px;
+            cursor: pointer;
+            margin-top: 10px;
+            width: 100%;
         }
 
-        .code-block {
-            background: #272822;
-            color: #f8f8f2;
-            padding: 15px;
-            border-radius: 10px;
-            overflow-x: auto;
-            margin-bottom: 20px;
-            font-family: Consolas, monospace;
+        button:hover {
+            background: #357ABD;
         }
 
-        footer {
-            text-align: center;
-            margin-top: 40px;
-            padding: 20px;
-            color: #777;
+        .name-box {
+            margin-top: 20px;
+            font-size: 24px;
+            font-weight: bold;
+            color: #222;
         }
     </style>
 </head>
 
 <body>
+    <div class="container">
+        <h1>Random Name Generator</h1>
+        <button onclick="generateName()">Generate Name</button>
+        <div class="name-box" id="nameBox">Click the button!</div>
+    </div>
 
-<header>
-    How to Make a Website
-</header>
+    <script>
+        const names = [
+            "Aiden", "Bella", "Caleb", "Daisy", "Ethan", "Fiona", "Gavin", "Hazel",
+            "Isla", "Jack", "Kylie", "Liam", "Maya", "Noah", "Olivia", "Parker",
+            "Quinn", "Riley", "Sophia", "Theo", "Uma", "Violet", "Wyatt", "Xavier",
+            "Yara", "Zane"
+        ];
 
-<div class="content">
-
-    <h2>1. Create an HTML file</h2>
-    <p>All websites start with an <strong>HTML file</strong>. HTML tells the browser what to show on the page.</p>
-    <p>Your file should be named <code>index.html</code>.</p>
-
-    <h2>2. Add basic structure</
+        function generateName() {
+            const randomIndex = Math.floor(Math.random() * names.length);
+            document.getElementById("nameBox").textContent = names[randomIndex];
+        }
+    </script>
+</body>
+</html>
