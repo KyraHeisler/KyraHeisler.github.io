@@ -1,178 +1,182 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Mini Game Maker</title>
+<meta charset="UTF-8" />
+<title>Ultimate Game Creator</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <style>
-    body {
-        font-family: Arial, sans-serif;
-        background: #f2f5fa;
-        padding: 20px;
+    body { font-family: Arial, sans-serif; margin: 0; display: flex; height: 100vh; }
+    #sidebar {
+        width: 300px; background: #f4f5f7; padding: 20px; overflow-y: auto;
+        border-right: 2px solid #ddd;
     }
-    .container {
-        max-width: 900px;
-        margin: auto;
-        background: white;
-        padding: 25px;
-        border-radius: 12px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    #canvasContainer {
+        flex: 1; display: flex; justify-content: center; align-items: center;
+        background: #e0e7ef;
     }
-    select, input, button, textarea {
-        width: 100%;
-        padding: 10px;
-        margin-top: 10px;
-        border-radius: 8px;
-        border: 1px solid #ccc;
+    #gameCanvas {
+        background: white; border: 2px solid black; cursor: crosshair;
+    }
+    .block {
+        padding: 10px; margin: 10px 0; border-radius: 10px;
+        background: #fff; border: 1px solid #ccc;
     }
     button {
-        background: #4a90e2;
-        color: white;
-        cursor: pointer;
-        font-size: 16px;
+        width: 100%; padding: 10px; border-radius: 8px; margin-top: 10px;
+        background: #4a90e2; color: white; border: none; cursor: pointer;
     }
     button:hover { background: #357abd; }
-    .game-area {
-        margin-top: 30px;
-        padding: 20px;
-        border-radius: 10px;
-        background: #eef3f8;
-    }
-    .click-button {
-        padding: 20px;
-        font-size: 20px;
-        background: #33c278;
-        border: none;
-        color: white;
-        border-radius: 10px;
-        cursor: pointer;
-    }
 </style>
 </head>
 <body>
 
-<div class="container">
-    <h1>🎮 Mini Game Maker</h1>
-    <p>Select the type of game you want to create:</p>
+<div id="sidebar">
+    <h2>🎮 Game Creator Panel</h2>
 
-    <select id="gameType" onchange="showGameOptions()">
-        <option value="">-- Choose a Game Type --</option>
-        <option value="clicker">Clicker Game</option>
-        <option value="quiz">Quiz Game</option>
-    </select>
+    <div class="block">
+        <h3>Add Object</h3>
+        <label>Type:</label>
+        <select id="objType">
+            <option value="square">Square</option>
+            <option value="circle">Circle</option>
+        </select>
 
-    <!-- CLICKER GAME OPTIONS -->
-    <div id="clickerOptions" style="display:none;">
-        <h2>Clicker Game Settings</h2>
-        <label>Button Text:</label>
-        <input id="clickerText" placeholder="Click Me!">
+        <label>Color:</label>
+        <input type="color" id="objColor" value="#ff0000">
 
-        <label>Points Needed to Win:</label>
-        <input type="number" id="clickerGoal" value="20">
-
-        <button onclick="createClickerGame()">Create Game</button>
+        <button onclick="addObject()">Add Object</button>
     </div>
 
-    <!-- QUIZ GAME OPTIONS -->
-    <div id="quizOptions" style="display:none;">
-        <h2>Quiz Game Settings</h2>
-        <label>Enter questions (Format: question | answer):</label>
-        <textarea id="quizInput" rows="6" placeholder="Example:
-What is 2+2? | 4
-Capital of France? | Paris"></textarea>
+    <div class="block">
+        <h3>Object Behavior</h3>
+        <label>Selected Object ID:</label>
+        <p id="selectedID">None</p>
 
-        <button onclick="createQuizGame()">Create Game</button>
+        <label>Movement:</label>
+        <select id="objMovement">
+            <option value="none">None</option>
+            <option value="leftRight">Left-Right</option>
+            <option value="upDown">Up-Down</option>
+        </select>
+
+        <button onclick="applyBehavior()">Apply Behavior</button>
     </div>
 
-    <!-- GAME AREA -->
-    <div id="gameArea" class="game-area"></div>
+    <div class="block">
+        <h3>Actions</h3>
+        <button onclick="runGame()">▶ Run Game</button>
+        <button onclick="stopGame()">■ Stop Game</button>
+    </div>
+</div>
+
+<div id="canvasContainer">
+    <canvas id="gameCanvas" width="700" height="500"></canvas>
 </div>
 
 <script>
-function showGameOptions() {
-    document.getElementById("clickerOptions").style.display = "none";
-    document.getElementById("quizOptions").style.display = "none";
-    document.getElementById("gameArea").innerHTML = "";
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
 
-    let type = document.getElementById("gameType").value;
-    if (type === "clicker") document.getElementById("clickerOptions").style.display = "block";
-    if (type === "quiz") document.getElementById("quizOptions").style.display = "block";
-}
+let objects = [];
+let selectedObject = null;
+let isRunning = false;
 
-/* ---------------- CLICKER GAME ---------------- */
-function createClickerGame() {
-    const text = document.getElementById("clickerText").value || "Click!";
-    const goal = Number(document.getElementById("clickerGoal").value);
+canvas.addEventListener("mousedown", (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
 
-    let html = `
-        <h2>Clicker Game</h2>
-        <p>Goal: ${goal} clicks</p>
-        <button class="click-button" id="clickBtn">${text}</button>
-        <p id="clickCount">Clicks: 0</p>
-    `;
+    selectedObject = objects.find(o =>
+        mouseX >= o.x &&
+        mouseX <= o.x + o.size &&
+        mouseY >= o.y &&
+        mouseY <= o.y + o.size
+    );
 
-    document.getElementById("gameArea").innerHTML = html;
+    document.getElementById("selectedID").innerText = selectedObject ? selectedObject.id : "None";
+});
 
-    let count = 0;
-    document.getElementById("clickBtn").onclick = () => {
-        count++;
-        document.getElementById("clickCount").innerHTML = "Clicks: " + count;
+function addObject() {
+    const type = document.getElementById("objType").value;
+    const color = document.getElementById("objColor").value;
 
-        if (count >= goal) {
-            alert("🎉 You won!");
-        }
+    const newObj = {
+        id: "obj" + (objects.length + 1),
+        type,
+        x: 100,
+        y: 100,
+        size: 50,
+        color,
+        behavior: "none",
+        direction: 1
     };
+
+    objects.push(newObj);
+    drawEditor();
 }
 
-/* ---------------- QUIZ GAME ---------------- */
-function createQuizGame() {
-    const raw = document.getElementById("quizInput").value.trim();
-    if (!raw) return alert("Please enter questions!");
+function applyBehavior() {
+    if (!selectedObject) return alert("Select an object first!");
+    selectedObject.behavior = document.getElementById("objMovement").value;
+}
 
-    const lines = raw.split("\n").map(l => l.trim());
-    let questions = [];
+function drawEditor() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    lines.forEach(line => {
-        let parts = line.split("|");
-        if (parts.length === 2) {
-            questions.push({
-                q: parts[0].trim(),
-                a: parts[1].trim().toLowerCase()
-            });
+    objects.forEach(obj => {
+        ctx.fillStyle = obj.color;
+        if (obj.type === "square")
+            ctx.fillRect(obj.x, obj.y, obj.size, obj.size);
+        else if (obj.type === "circle") {
+            ctx.beginPath();
+            ctx.arc(obj.x + obj.size/2, obj.y + obj.size/2, obj.size/2, 0, Math.PI*2);
+            ctx.fill();
+        }
+    });
+}
+
+function runGame() {
+    if (isRunning) return;
+    isRunning = true;
+    gameLoop();
+}
+
+function stopGame() {
+    isRunning = false;
+    drawEditor();
+}
+
+function gameLoop() {
+    if (!isRunning) return;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    objects.forEach(obj => {
+        // Movement behavior
+        if (obj.behavior === "leftRight") {
+            obj.x += 2 * obj.direction;
+            if (obj.x <= 0 || obj.x + obj.size >= canvas.width) obj.direction *= -1;
+        }
+
+        if (obj.behavior === "upDown") {
+            obj.y += 2 * obj.direction;
+            if (obj.y <= 0 || obj.y + obj.size >= canvas.height) obj.direction *= -1;
+        }
+
+        ctx.fillStyle = obj.color;
+        if (obj.type === "square")
+            ctx.fillRect(obj.x, obj.y, obj.size, obj.size);
+        else if (obj.type === "circle") {
+            ctx.beginPath();
+            ctx.arc(obj.x + obj.size/2, obj.y + obj.size/2, obj.size/2, 0, Math.PI*2);
+            ctx.fill();
         }
     });
 
-    if (questions.length === 0) return alert("No valid questions found.");
-
-    let output = `<h2>Quiz Game</h2><div id="quizBox">`;
-
-    questions.forEach((q, i) => {
-        output += `
-            <p><strong>${q.q}</strong></p>
-            <input id="ans${i}" placeholder="Your answer...">
-        `;
-    });
-
-    output += `
-        <button onclick="checkQuiz(${questions.length})">Submit Answers</button>
-        </div>
-    `;
-
-    window.quizQuestions = questions;
-    document.getElementById("gameArea").innerHTML = output;
+    requestAnimationFrame(gameLoop);
 }
 
-function checkQuiz(total) {
-    let correct = 0;
-
-    for (let i = 0; i < total; i++) {
-        let userAns = document.getElementById("ans" + i).value.trim().toLowerCase();
-        if (userAns === window.quizQuestions[i].a) correct++;
-    }
-
-    alert(`You got ${correct} / ${total} correct!`);
-}
+drawEditor();
 </script>
 
 </body>
