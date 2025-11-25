@@ -2,181 +2,242 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Ultimate Game Creator</title>
+<title>Web Game Studio (Roblox Style)</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <style>
-    body { font-family: Arial, sans-serif; margin: 0; display: flex; height: 100vh; }
-    #sidebar {
-        width: 300px; background: #f4f5f7; padding: 20px; overflow-y: auto;
-        border-right: 2px solid #ddd;
+    body {
+        margin: 0;
+        display: flex;
+        height: 100vh;
+        font-family: Arial, sans-serif;
+        overflow: hidden;
     }
-    #canvasContainer {
-        flex: 1; display: flex; justify-content: center; align-items: center;
-        background: #e0e7ef;
+
+    /* Explorer (hierarchy) */
+    #explorer {
+        width: 250px;
+        background: #1e1f22;
+        color: white;
+        padding: 10px;
+        overflow-y: auto;
+        border-right: 2px solid #333;
     }
-    #gameCanvas {
-        background: white; border: 2px solid black; cursor: crosshair;
+
+    .explorer-item {
+        padding: 6px;
+        background: #2a2c30;
+        margin-bottom: 5px;
+        cursor: pointer;
+        border-radius: 4px;
     }
-    .block {
-        padding: 10px; margin: 10px 0; border-radius: 10px;
-        background: #fff; border: 1px solid #ccc;
+    .explorer-item:hover { background: #3b3d42; }
+
+    /* Scene editor */
+    #scene {
+        flex: 1;
+        background: #e5e9f0;
+        position: relative;
     }
-    button {
-        width: 100%; padding: 10px; border-radius: 8px; margin-top: 10px;
-        background: #4a90e2; color: white; border: none; cursor: pointer;
+
+    .object {
+        position: absolute;
+        cursor: pointer;
+        border: 2px solid transparent;
     }
-    button:hover { background: #357abd; }
+    .selected {
+        border: 2px solid #ffb300;
+    }
+
+    /* Inspector */
+    #inspector {
+        width: 280px;
+        background: #f1f1f1;
+        padding: 10px;
+        overflow-y: auto;
+        border-left: 2px solid #ccc;
+    }
+
+    label { font-weight: bold; margin-top: 10px; display: block; }
+
+    input {
+        width: 100%;
+        padding: 6px;
+        margin-top: 4px;
+    }
+
+    /* Toolbar */
+    #toolbar {
+        width: 100%;
+        background: #3c3f44;
+        padding: 8px;
+        color: white;
+        display: flex;
+        gap: 10px;
+    }
+    #toolbar button {
+        background: #4a90e2;
+        border: none;
+        padding: 8px 12px;
+        border-radius: 6px;
+        color: white;
+        cursor: pointer;
+    }
+
+    #scriptEditor {
+        width: 100%;
+        height: 150px;
+        margin-top: 10px;
+        font-family: monospace;
+    }
 </style>
 </head>
 <body>
 
-<div id="sidebar">
-    <h2>🎮 Game Creator Panel</h2>
-
-    <div class="block">
-        <h3>Add Object</h3>
-        <label>Type:</label>
-        <select id="objType">
-            <option value="square">Square</option>
-            <option value="circle">Circle</option>
-        </select>
-
-        <label>Color:</label>
-        <input type="color" id="objColor" value="#ff0000">
-
-        <button onclick="addObject()">Add Object</button>
-    </div>
-
-    <div class="block">
-        <h3>Object Behavior</h3>
-        <label>Selected Object ID:</label>
-        <p id="selectedID">None</p>
-
-        <label>Movement:</label>
-        <select id="objMovement">
-            <option value="none">None</option>
-            <option value="leftRight">Left-Right</option>
-            <option value="upDown">Up-Down</option>
-        </select>
-
-        <button onclick="applyBehavior()">Apply Behavior</button>
-    </div>
-
-    <div class="block">
-        <h3>Actions</h3>
-        <button onclick="runGame()">▶ Run Game</button>
-        <button onclick="stopGame()">■ Stop Game</button>
-    </div>
+<!-- Explorer -->
+<div id="explorer">
+    <h3>Explorer</h3>
+    <button onclick="addPart()">Add Part</button>
+    <div id="explorerList"></div>
 </div>
 
-<div id="canvasContainer">
-    <canvas id="gameCanvas" width="700" height="500"></canvas>
+<!-- Main Scene -->
+<div id="scene"></div>
+
+<!-- Inspector -->
+<div id="inspector">
+    <h3>Inspector</h3>
+    <div id="inspectorContent">Select an object.</div>
+
+    <h4>Script</h4>
+    <textarea id="scriptEditor" placeholder="object.x += 1"></textarea>
+    <button onclick="applyScript()">Apply Script</button>
+
+    <hr>
+    <button onclick="playGame()">▶ Play</button>
+    <button onclick="stopGame()">■ Stop</button>
 </div>
 
 <script>
-const canvas = document.getElementById("gameCanvas");
-const ctx = canvas.getContext("2d");
-
 let objects = [];
-let selectedObject = null;
-let isRunning = false;
+let selected = null;
+let playing = false;
+let interval = null;
 
-canvas.addEventListener("mousedown", (e) => {
-    const rect = canvas.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
+const scene = document.getElementById("scene");
+const explorerList = document.getElementById("explorerList");
+const inspector = document.getElementById("inspectorContent");
 
-    selectedObject = objects.find(o =>
-        mouseX >= o.x &&
-        mouseX <= o.x + o.size &&
-        mouseY >= o.y &&
-        mouseY <= o.y + o.size
-    );
+function addPart() {
+    const id = "Part" + (objects.length + 1);
 
-    document.getElementById("selectedID").innerText = selectedObject ? selectedObject.id : "None";
-});
-
-function addObject() {
-    const type = document.getElementById("objType").value;
-    const color = document.getElementById("objColor").value;
-
-    const newObj = {
-        id: "obj" + (objects.length + 1),
-        type,
+    const obj = {
+        id,
         x: 100,
         y: 100,
-        size: 50,
-        color,
-        behavior: "none",
-        direction: 1
+        width: 60,
+        height: 60,
+        color: "#ff4444",
+        script: "",
+        el: null
     };
 
-    objects.push(newObj);
-    drawEditor();
+    const div = document.createElement("div");
+    div.className = "object";
+    div.style.width = obj.width + "px";
+    div.style.height = obj.height + "px";
+    div.style.background = obj.color;
+    div.style.left = obj.x + "px";
+    div.style.top = obj.y + "px";
+    div.onclick = () => selectObject(obj);
+
+    obj.el = div;
+    scene.appendChild(div);
+    objects.push(obj);
+
+    refreshExplorer();
 }
 
-function applyBehavior() {
-    if (!selectedObject) return alert("Select an object first!");
-    selectedObject.behavior = document.getElementById("objMovement").value;
-}
-
-function drawEditor() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    objects.forEach(obj => {
-        ctx.fillStyle = obj.color;
-        if (obj.type === "square")
-            ctx.fillRect(obj.x, obj.y, obj.size, obj.size);
-        else if (obj.type === "circle") {
-            ctx.beginPath();
-            ctx.arc(obj.x + obj.size/2, obj.y + obj.size/2, obj.size/2, 0, Math.PI*2);
-            ctx.fill();
-        }
+function refreshExplorer() {
+    explorerList.innerHTML = "";
+    objects.forEach(o => {
+        const item = document.createElement("div");
+        item.className = "explorer-item";
+        item.innerText = o.id;
+        item.onclick = () => selectObject(o);
+        explorerList.appendChild(item);
     });
 }
 
-function runGame() {
-    if (isRunning) return;
-    isRunning = true;
-    gameLoop();
+function selectObject(obj) {
+    if (selected) selected.el.classList.remove("selected");
+    selected = obj;
+    selected.el.classList.add("selected");
+
+    inspector.innerHTML = `
+        <label>X</label>
+        <input type="number" id="propX" value="${obj.x}" onchange="updateProperties()">
+
+        <label>Y</label>
+        <input type="number" id="propY" value="${obj.y}" onchange="updateProperties()">
+
+        <label>Width</label>
+        <input type="number" id="propW" value="${obj.width}" onchange="updateProperties()">
+
+        <label>Height</label>
+        <input type="number" id="propH" value="${obj.height}" onchange="updateProperties()">
+
+        <label>Color</label>
+        <input type="color" id="propC" value="${obj.color}" onchange="updateProperties()">
+    `;
+
+    document.getElementById("scriptEditor").value = selected.script;
+}
+
+function updateProperties() {
+    if (!selected) return;
+
+    selected.x = Number(document.getElementById("propX").value);
+    selected.y = Number(document.getElementById("propY").value);
+    selected.width = Number(document.getElementById("propW").value);
+    selected.height = Number(document.getElementById("propH").value);
+    selected.color = document.getElementById("propC").value;
+
+    selected.el.style.left = selected.x + "px";
+    selected.el.style.top = selected.y + "px";
+    selected.el.style.width = selected.width + "px";
+    selected.el.style.height = selected.height + "px";
+    selected.el.style.background = selected.color;
+}
+
+function applyScript() {
+    if (!selected) return;
+    selected.script = document.getElementById("scriptEditor").value;
+}
+
+function playGame() {
+    if (playing) return;
+    playing = true;
+
+    interval = setInterval(() => {
+        objects.forEach(o => {
+            if (o.script.trim() !== "") {
+                try {
+                    eval(o.script);
+                    o.el.style.left = o.x + "px";
+                    o.el.style.top = o.y + "px";
+                } catch(e) {
+                    console.error("Script error:", e);
+                }
+            }
+        });
+    }, 30);
 }
 
 function stopGame() {
-    isRunning = false;
-    drawEditor();
+    playing = false;
+    clearInterval(interval);
 }
-
-function gameLoop() {
-    if (!isRunning) return;
-
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    objects.forEach(obj => {
-        // Movement behavior
-        if (obj.behavior === "leftRight") {
-            obj.x += 2 * obj.direction;
-            if (obj.x <= 0 || obj.x + obj.size >= canvas.width) obj.direction *= -1;
-        }
-
-        if (obj.behavior === "upDown") {
-            obj.y += 2 * obj.direction;
-            if (obj.y <= 0 || obj.y + obj.size >= canvas.height) obj.direction *= -1;
-        }
-
-        ctx.fillStyle = obj.color;
-        if (obj.type === "square")
-            ctx.fillRect(obj.x, obj.y, obj.size, obj.size);
-        else if (obj.type === "circle") {
-            ctx.beginPath();
-            ctx.arc(obj.x + obj.size/2, obj.y + obj.size/2, obj.size/2, 0, Math.PI*2);
-            ctx.fill();
-        }
-    });
-
-    requestAnimationFrame(gameLoop);
-}
-
-drawEditor();
 </script>
 
 </body>
