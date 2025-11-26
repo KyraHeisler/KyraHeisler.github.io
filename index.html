@@ -1,10 +1,25 @@
-// Multiplayer WebSocket server
-const WebSocket = require("ws");
+<!-- ============================================================
+     FULL MULTIPLAYER NO-CODE GAME CREATOR — ALL IN ONE CODE BLOCK
+     Files included:
+       1) server.js     — Multiplayer WebSocket server
+       2) index.html    — Game Builder UI + 3D canvas
+       3) studio.js     — Editor + Multiplayer Client
+=============================================================== -->
 
-const wss = new WebSocket.Server({ port: 8080 });
+<!-- ===========================
+       1) server.js
+=========================== -->
+
+// Save this part as: server.js
+// Run with:  node server.js
+// Requires:  npm install ws
+
+const WebSocket = require("ws");
+const server = new WebSocket.Server({ port: 8080 });
+
 let players = {};
 
-wss.on("connection", ws => {
+server.on("connection", ws => {
     const id = Date.now().toString();
     players[id] = { x: 0, y: 1, z: 0 };
 
@@ -16,7 +31,6 @@ wss.on("connection", ws => {
         if (data.type === "move") {
             players[id] = data.position;
 
-            // broadcast movement to all players
             broadcast(JSON.stringify({
                 type: "playerMove",
                 id,
@@ -32,18 +46,241 @@ wss.on("connection", ws => {
 });
 
 function broadcast(msg) {
-    wss.clients.forEach(client => client.send(msg));
+    server.clients.forEach(client => client.send(msg));
 }
 
-console.log("Multiplayer server running on ws://localhost:8080");
-let socket;
-let playerId = null;
+console.log("Multiplayer server running at ws://localhost:8080");
+
+
+
+
+
+<!-- ===========================
+       2) index.html
+=========================== -->
+
+<!-- Save this part as: index.html -->
+
+<!DOCTYPE html>
+<html>
+<head>
+<title>No-Code Multiplayer Game Creator</title>
+<style>
+  body { margin: 0; overflow: hidden; font-family: Arial; }
+
+  #ui {
+    position: fixed; top: 10px; left: 10px;
+    padding: 10px; background: rgba(0,0,0,0.6);
+    color: white; border-radius: 10px; width: 230px;
+  }
+
+  #properties-panel {
+    position: fixed; top: 10px; right: 10px;
+    width: 230px; padding: 10px;
+    background: rgba(0,0,0,0.6); color: white;
+    border-radius: 10px;
+  }
+
+  button, input { width: 100%; margin-top: 6px; padding: 6px; }
+</style>
+</head>
+
+<body>
+<div id="ui">
+  <h3>No-Code Game Builder</h3>
+
+  <strong>Add Object:</strong>
+  <button onclick="addCube()">Cube</button>
+  <button onclick="addSphere()">Sphere</button>
+
+  <br><br>
+  <strong>Environment:</strong>
+  <input type="color" id="bgColor" value="#222222" onchange="setBackground()">
+
+  <br><br>
+  <strong>Multiplayer:</strong>
+  <button onclick="connectMultiplayer()">Join Multiplayer</button>
+
+  <br><br>
+  <strong>Save/Load:</strong>
+  <button onclick="saveScene()">Save Game</button>
+  <button onclick="loadScene()">Load Game</button>
+</div>
+
+<div id="properties-panel">
+  <h3>Properties</h3>
+  <div id="properties-content">Select an object</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.159/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.159/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.159/examples/js/controls/TransformControls.js"></script>
+
+<script src="studio.js"></script>
+</body>
+</html>
+
+
+
+
+
+
+<!-- ===========================
+       3) studio.js
+=========================== -->
+
+// Save this part as: studio.js
+
+let scene, camera, renderer, orbit, transformControl;
+let socket, playerId = null;
 let otherPlayers = {};
+let player;
+
+function init() {
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x222222);
+
+    camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 1000);
+    camera.position.set(6, 6, 10);
+
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(innerWidth, innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    orbit = new THREE.OrbitControls(camera, renderer.domElement);
+
+    const light = new THREE.DirectionalLight(0xffffff, 1);
+    light.position.set(5,10,7);
+    scene.add(light);
+
+    const grid = new THREE.GridHelper(50, 50);
+    scene.add(grid);
+
+    transformControl = new THREE.TransformControls(camera, renderer.domElement);
+    transformControl.addEventListener("dragging-changed", e => orbit.enabled = !e.value);
+    scene.add(transformControl);
+
+    window.addEventListener("pointerdown", pickObject);
+
+    // local player
+    player = new THREE.Mesh(
+        new THREE.BoxGeometry(1, 1.8, 1),
+        new THREE.MeshStandardMaterial({ color: 0x00ffcc })
+    );
+    player.position.set(0,1,0);
+    scene.add(player);
+
+    animate();
+}
+
+function animate() {
+    requestAnimationFrame(animate);
+
+    if (socket && playerId) updatePlayerPosition();
+    
+    renderer.render(scene, camera);
+}
+
+function addCube() {
+    let mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(1,1,1),
+        new THREE.MeshStandardMaterial({ color: 0x00aaff })
+    );
+    mesh.position.set(0,1,0);
+    mesh.userData.type = "cube";
+    scene.add(mesh);
+    select(mesh);
+}
+
+function addSphere() {
+    let mesh = new THREE.Mesh(
+        new THREE.SphereGeometry(0.6, 32, 32),
+        new THREE.MeshStandardMaterial({ color: 0xff5555 })
+    );
+    mesh.position.set(0,1,0);
+    mesh.userData.type = "sphere";
+    scene.add(mesh);
+    select(mesh);
+}
+
+function pickObject(e) {
+    let mouse = new THREE.Vector2(
+        (e.clientX / innerWidth) * 2 - 1,
+        -(e.clientY / innerHeight) * 2 + 1
+    );
+
+    let ray = new THREE.Raycaster();
+    ray.setFromCamera(mouse, camera);
+
+    let hits = ray.intersectObjects(scene.children, true);
+    if (!hits.length) return;
+
+    let obj = hits[0].object;
+    while (obj.parent && !obj.parent.isScene) obj = obj.parent;
+
+    if (obj !== player) select(obj);
+}
+
+function select(obj) {
+    transformControl.attach(obj);
+
+    document.getElementById("properties-content").innerHTML = `
+      <strong>Type:</strong> ${obj.userData.type || "object"}<br><br>
+      <label>Color</label>
+      <input type="color" onchange="setColor('${obj.uuid}', this.value)">
+    `;
+}
+
+function setColor(uuid, col) {
+    let obj = scene.getObjectByProperty("uuid", uuid);
+    if (obj) obj.material.color.set(col);
+}
+
+function setBackground() {
+    let col = document.getElementById("bgColor").value;
+    scene.background.set(col);
+}
+
+function saveScene() {
+    let data = scene.children
+      .filter(o => o.isMesh && o !== player)
+      .map(o => ({
+        type: o.userData.type,
+        pos: o.position,
+        color: o.material.color
+      }));
+
+    localStorage.setItem("gameScene", JSON.stringify(data));
+    alert("Game saved!");
+}
+
+function loadScene() {
+    let data = JSON.parse(localStorage.getItem("gameScene"));
+    if (!data) return alert("No saved game!");
+
+    scene.children = scene.children.filter(o => o === player || !o.isMesh);
+
+    data.forEach(o => {
+        if (o.type === "cube") addCube();
+        if (o.type === "sphere") addSphere();
+    });
+
+    alert("Game loaded!");
+}
+
+
+
+
+
+// ======================
+//   MULTIPLAYER CLIENT
+// ======================
+
 function connectMultiplayer() {
     socket = new WebSocket("ws://localhost:8080");
 
     socket.onmessage = e => {
-        const data = JSON.parse(e.data);
+        let data = JSON.parse(e.data);
 
         if (data.type === "init") {
             playerId = data.id;
@@ -58,35 +295,42 @@ function connectMultiplayer() {
         }
 
         if (data.type === "playerLeft") {
-            removeOtherPlayer(data.id);
+            if (otherPlayers[data.id]) {
+                scene.remove(otherPlayers[data.id]);
+                delete otherPlayers[data.id];
+            }
         }
     };
-}
-function updatePlayerPosition() {
-    const p = player.position;
 
-    socket.send(JSON.stringify({
-        type: "move",
-        position: { x: p.x, y: p.y, z: p.z }
-    }));
+    alert("Connected to multiplayer!");
 }
+
 function spawnOtherPlayer(id, pos) {
-    const geo = new THREE.BoxGeometry(1, 1.8, 1);
-    const mat = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
-    const mesh = new THREE.Mesh(geo, mat);
+    let mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(1,1.8,1),
+        new THREE.MeshStandardMaterial({ color: 0xff00ff })
+    );
 
     mesh.position.set(pos.x, pos.y, pos.z);
-    scene.add(mesh);
-
     otherPlayers[id] = mesh;
+    scene.add(mesh);
 }
+
 function moveOtherPlayer(id, pos) {
-    if (!otherPlayers[id]) return;
-    otherPlayers[id].position.set(pos.x, pos.y, pos.z);
-}
-function removeOtherPlayer(id) {
     if (otherPlayers[id]) {
-        scene.remove(otherPlayers[id]);
-        delete otherPlayers[id];
+        otherPlayers[id].position.set(pos.x, pos.y, pos.z);
     }
 }
+
+function updatePlayerPosition() {
+    socket.send(JSON.stringify({
+        type: "move",
+        position: {
+            x: player.position.x,
+            y: player.position.y,
+            z: player.position.z
+        }
+    }));
+}
+
+init();
