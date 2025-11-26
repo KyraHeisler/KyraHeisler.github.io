@@ -1,142 +1,150 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>No-Code Game Creator</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-
-<style>
-    body { margin:0; display:flex; height:100vh; font-family:Arial; overflow:hidden; }
-
-    #sidebar {
-        width:260px; background:#222; color:white; padding:15px;
-        overflow-y:auto; border-right:2px solid #444;
+  <meta charset="UTF-8" />
+  <title>Mini Game Studio</title>
+  <style>
+    body { margin: 0; overflow: hidden; }
+    #ui {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      background: rgba(0,0,0,0.5);
+      padding: 10px;
+      border-radius: 5px;
+      color: white;
+      font-family: Arial;
     }
-    h2 { margin-top:0; }
-    select, button {
-        width:100%; padding:10px; margin-top:10px; border-radius:6px;
-        border:none; font-size:15px;
-    }
-    button { background:#4a90e2; color:white; cursor:pointer; }
-    button:hover { background:#357abd; }
-
-    #scene {
-        flex:1; background:#dfe6ee; position:relative;
-    }
-
-    .obj {
-        position:absolute;
-        border-radius:6px;
-    }
-
-    .player { background:#00c853; }
-    .enemy { background:#d50000; }
-    .coin { background:#fdd835; border-radius:50%; }
-    .platform { background:#6d4c41; }
-</style>
+    button { margin: 5px; }
+  </style>
 </head>
 <body>
+  <div id="ui">
+    <h3>Object Palette</h3>
+    <button onclick="addCube()">Add Cube</button>
+    <button onclick="addSphere()">Add Sphere</button>
+    <br><br>
+    <button onclick="saveScene()">Save Scene</button>
+    <button onclick="loadScene()">Load Scene</button>
+  </div>
 
-<div id="sidebar">
-    <h2>No-Code Game Maker</h2>
-
-    <label>Object Type:</label>
-    <select id="objType">
-        <option value="player">Player</option>
-        <option value="enemy">Enemy</option>
-        <option value="coin">Coin</option>
-        <option value="platform">Platform</option>
-    </select>
-
-    <label>Behavior:</label>
-    <select id="behavior">
-        <option value="none">None</option>
-        <option value="moveLeftRight">Move Left & Right</option>
-        <option value="moveUpDown">Move Up & Down</option>
-        <option value="patrol">Patrol</option>
-    </select>
-
-    <button onclick="playGame()">▶ Play Game</button>
-    <button onclick="stopGame()">■ Stop</button>
-</div>
-
-<div id="scene"></div>
-
-<script>
-const scene = document.getElementById("scene");
-let objects = [];
-let isPlaying = false;
-let gameInterval;
-
-// --- ADD OBJECTS BY CLICKING ---
-scene.addEventListener("click", (e) => {
-    if (isPlaying) return;
-
-    const type = document.getElementById("objType").value;
-    const behavior = document.getElementById("behavior").value;
-
-    let size = 40;
-    if (type === "platform") size = 120;
-
-    const obj = {
-        type,
-        behavior,
-        x: e.offsetX,
-        y: e.offsetY,
-        width: size,
-        height: size,
-        dx: 2,
-        dy: 2,
-        el: document.createElement("div")
-    };
-
-    obj.el.classList.add("obj", type);
-    obj.el.style.width = obj.width + "px";
-    obj.el.style.height = obj.height + "px";
-    obj.el.style.left = obj.x + "px";
-    obj.el.style.top = obj.y + "px";
-
-    scene.appendChild(obj.el);
-    objects.push(obj);
-});
-
-// --- PLAY THE GAME ---
-function playGame() {
-    if (isPlaying) return;
-    isPlaying = true;
-
-    gameInterval = setInterval(() => {
-        objects.forEach(o => {
-            if (o.behavior === "moveLeftRight") {
-                o.x += o.dx;
-                if (o.x <= 0 || o.x + o.width >= scene.clientWidth) o.dx *= -1;
-            }
-
-            if (o.behavior === "moveUpDown") {
-                o.y += o.dy;
-                if (o.y <= 0 || o.y + o.height >= scene.clientHeight) o.dy *= -1;
-            }
-
-            if (o.behavior === "patrol") {
-                o.x += o.dx;
-                o.y += o.dy;
-                if (o.x <= 0 || o.x + o.width >= scene.clientWidth) o.dx *= -1;
-                if (o.y <= 0 || o.y + o.height >= scene.clientHeight) o.dy *= -1;
-            }
-
-            // Update visuals
-            o.el.style.left = o.x + "px";
-            o.el.style.top = o.y + "px";
-        });
-    }, 20);
-}
-
-// --- STOP THE GAME ---
-function stopGame() {
-    isPlaying = false;
-    clearInterval(gameInterval);
-}
-</script>
-
+  <script src="https://cdn.jsdelivr.net/npm/three@0.159/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.159/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.159/examples/js/controls/TransformControls.js"></script>
+  <script src="studio.js"></script>
 </body>
 </html>
+let scene, camera, renderer, orbit, transformControl;
+let selectedObject = null;
+
+// init
+function init() {
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x222222);
+
+    camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
+    camera.position.set(6, 6, 10);
+
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    // orbit camera
+    orbit = new THREE.OrbitControls(camera, renderer.domElement);
+
+    // grid
+    const grid = new THREE.GridHelper(30, 30);
+    scene.add(grid);
+
+    // transform controls
+    transformControl = new THREE.TransformControls(camera, renderer.domElement);
+    transformControl.addEventListener("dragging-changed", e => orbit.enabled = !e.value);
+    scene.add(transformControl);
+
+    // raycaster for clicking on objects
+    window.addEventListener("pointerdown", onPointerDown);
+
+    // default object
+    addCube({ x: 0, y: 1, z: 0 });
+
+    animate();
+}
+
+function animate() {
+    requestAnimationFrame(animate);
+    renderer.render(scene, camera);
+}
+
+function addCube(pos={x:0,y:1,z:0}) {
+    const geo = new THREE.BoxGeometry(1,1,1);
+    const mat = new THREE.MeshStandardMaterial({ color: 0x00aaff });
+    let cube = new THREE.Mesh(geo, mat);
+    cube.position.set(pos.x,pos.y,pos.z);
+    cube.userData.type = "cube";
+    scene.add(cube);
+    attach(cube);
+}
+
+function addSphere(pos={x:0,y:1,z:0}) {
+    const geo = new THREE.SphereGeometry(0.5, 32, 32);
+    const mat = new THREE.MeshStandardMaterial({ color: 0xff4444 });
+    let sphere = new THREE.Mesh(geo, mat);
+    sphere.position.set(pos.x,pos.y,pos.z);
+    sphere.userData.type = "sphere";
+    scene.add(sphere);
+    attach(sphere);
+}
+
+function attach(obj) {
+    selectedObject = obj;
+    transformControl.attach(obj);
+}
+
+function onPointerDown(event) {
+    let mouse = new THREE.Vector2(
+        (event.clientX / window.innerWidth) * 2 - 1,
+        -(event.clientY / window.innerHeight) * 2 + 1
+    );
+
+    let raycaster = new THREE.Raycaster();
+    raycaster.setFromCamera(mouse, camera);
+
+    let hits = raycaster.intersectObjects(scene.children);
+    if (hits.length > 0 && hits[0].object !== transformControl) {
+        attach(hits[0].object);
+    }
+}
+
+// ---- Save / Load ----
+function saveScene() {
+    const data = [];
+
+    scene.children.forEach(obj => {
+        if (obj.isMesh) {
+            data.push({
+                type: obj.userData.type,
+                position: obj.position
+            });
+        }
+    });
+
+    localStorage.setItem("studioScene", JSON.stringify(data));
+    alert("Scene saved!");
+}
+
+function loadScene() {
+    const data = JSON.parse(localStorage.getItem("studioScene"));
+    if (!data) return alert("No saved scene!");
+
+    // clear meshes
+    scene.children = scene.children.filter(x => !x.isMesh);
+
+    data.forEach(obj => {
+        if (obj.type === "cube") addCube(obj.position);
+        if (obj.type === "sphere") addSphere(obj.position);
+    });
+
+    alert("Scene loaded!");
+}
+
+init();
