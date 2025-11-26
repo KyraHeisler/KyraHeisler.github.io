@@ -1,72 +1,120 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Mini Game Studio</title>
-  <style>
-    body { margin: 0; overflow: hidden; }
-    #ui {
-      position: fixed;
-      top: 10px;
-      left: 10px;
-      background: rgba(0,0,0,0.5);
-      padding: 10px;
-      border-radius: 5px;
-      color: white;
-      font-family: Arial;
-    }
-    button { margin: 5px; }
-  </style>
-</head>
-<body>
-  <div id="ui">
-    <h3>Object Palette</h3>
-    <button onclick="addCube()">Add Cube</button>
-    <button onclick="addSphere()">Add Sphere</button>
-    <br><br>
-    <button onclick="saveScene()">Save Scene</button>
-    <button onclick="loadScene()">Load Scene</button>
-  </div>
+<meta charset="UTF-8">
+<title>No-Code Game Creator</title>
+<style>
+  body { margin: 0; overflow: hidden; font-family: Arial; }
 
-  <script src="https://cdn.jsdelivr.net/npm/three@0.159/build/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.159/examples/js/controls/OrbitControls.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.159/examples/js/controls/TransformControls.js"></script>
-  <script src="studio.js"></script>
+  #ui {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    padding: 10px;
+    background: rgba(0,0,0,0.55);
+    color: white;
+    border-radius: 10px;
+    width: 230px;
+  }
+  #properties-panel {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    padding: 10px;
+    background: rgba(0,0,0,0.55);
+    color: white;
+    width: 230px;
+    border-radius: 10px;
+  }
+
+  button, input, select {
+    width: 100%;
+    margin-top: 6px;
+    padding: 6px;
+    border-radius: 5px;
+  }
+</style>
+</head>
+
+<body>
+<div id="ui">
+  <h3>Game Builder</h3>
+
+  <strong>Add Object:</strong>
+  <button onclick="addCube()">Cube</button>
+  <button onclick="addSphere()">Sphere</button>
+  <button onclick="openCharacterCreator()">Character</button>
+
+  <br><br>
+
+  <strong>Environment:</strong>
+  <input type="color" id="bgColor" value="#222222" onchange="setBackground()">
+
+  <br><br>
+
+  <strong>Scene:</strong>
+  <button onclick="saveScene()">Save Game</button>
+  <button onclick="loadScene()">Load Game</button>
+</div>
+
+<!-- PROPERTIES PANEL -->
+<div id="properties-panel">
+  <h3>Properties</h3>
+  <div id="properties-content">Select an object</div>
+</div>
+
+<!-- CHARACTER CREATOR WINDOW -->
+<div id="character-creator" 
+     style="display:none; position:fixed; top:50%; left:50%;
+            transform:translate(-50%, -50%);
+            background:#333; padding:20px; color:white;
+            border-radius:10px; width:300px;">
+
+  <h3>Create a Character</h3>
+  <label>Body Color:</label>
+  <input type="color" id="charColor" value="#ffcc00">
+
+  <label>Head Size:</label>
+  <input type="range" id="headSize" min="0.5" max="2" step="0.1" value="1">
+
+  <br><br>
+  <button onclick="createCharacter()">Add Character</button>
+  <button onclick="closeCharacterCreator()">Cancel</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.159/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.159/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.159/examples/js/controls/TransformControls.js"></script>
+<script src="studio.js"></script>
 </body>
 </html>
 let scene, camera, renderer, orbit, transformControl;
 let selectedObject = null;
 
-// init
+// ---------- INIT ----------
 function init() {
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x222222);
 
-    camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
+    camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
     camera.position.set(6, 6, 10);
 
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
-    // orbit camera
     orbit = new THREE.OrbitControls(camera, renderer.domElement);
 
-    // grid
     const grid = new THREE.GridHelper(30, 30);
     scene.add(grid);
 
-    // transform controls
     transformControl = new THREE.TransformControls(camera, renderer.domElement);
     transformControl.addEventListener("dragging-changed", e => orbit.enabled = !e.value);
     scene.add(transformControl);
 
-    // raycaster for clicking on objects
-    window.addEventListener("pointerdown", onPointerDown);
+    window.addEventListener("pointerdown", pickObject);
 
-    // default object
     addCube({ x: 0, y: 1, z: 0 });
-
     animate();
 }
 
@@ -75,76 +123,155 @@ function animate() {
     renderer.render(scene, camera);
 }
 
-function addCube(pos={x:0,y:1,z:0}) {
-    const geo = new THREE.BoxGeometry(1,1,1);
-    const mat = new THREE.MeshStandardMaterial({ color: 0x00aaff });
-    let cube = new THREE.Mesh(geo, mat);
-    cube.position.set(pos.x,pos.y,pos.z);
-    cube.userData.type = "cube";
-    scene.add(cube);
-    attach(cube);
+// ---------- OBJECT ADDERS ----------
+function addCube(pos = { x: 0, y: 1, z: 0 }) {
+    const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(1, 1, 1),
+        new THREE.MeshStandardMaterial({ color: 0x00aaff })
+    );
+    mesh.position.set(pos.x, pos.y, pos.z);
+    mesh.userData.type = "cube";
+    scene.add(mesh);
+    select(mesh);
 }
 
-function addSphere(pos={x:0,y:1,z:0}) {
-    const geo = new THREE.SphereGeometry(0.5, 32, 32);
-    const mat = new THREE.MeshStandardMaterial({ color: 0xff4444 });
-    let sphere = new THREE.Mesh(geo, mat);
-    sphere.position.set(pos.x,pos.y,pos.z);
-    sphere.userData.type = "sphere";
-    scene.add(sphere);
-    attach(sphere);
+function addSphere(pos = { x: 0, y: 1, z: 0 }) {
+    const mesh = new THREE.Mesh(
+        new THREE.SphereGeometry(0.6, 32, 32),
+        new THREE.MeshStandardMaterial({ color: 0xff5555 })
+    );
+    mesh.position.set(pos.x, pos.y, pos.z);
+    mesh.userData.type = "sphere";
+    scene.add(mesh);
+    select(mesh);
 }
 
-function attach(obj) {
-    selectedObject = obj;
-    transformControl.attach(obj);
+// ---------- CHARACTER CREATOR ----------
+function openCharacterCreator() {
+    document.getElementById("character-creator").style.display = "block";
 }
 
-function onPointerDown(event) {
-    let mouse = new THREE.Vector2(
+function closeCharacterCreator() {
+    document.getElementById("character-creator").style.display = "none";
+}
+
+function createCharacter() {
+    const bodyColor = document.getElementById("charColor").value;
+    const headScale = parseFloat(document.getElementById("headSize").value);
+
+    const body = new THREE.Mesh(
+        new THREE.BoxGeometry(1, 1.5, 0.6),
+        new THREE.MeshStandardMaterial({ color: bodyColor })
+    );
+
+    const head = new THREE.Mesh(
+        new THREE.SphereGeometry(0.5 * headScale, 32, 32),
+        new THREE.MeshStandardMaterial({ color: bodyColor })
+    );
+    head.position.y = 1.25;
+
+    const character = new THREE.Group();
+    character.add(body);
+    character.add(head);
+
+    character.position.set(0, 1, 0);
+    character.userData.type = "character";
+
+    scene.add(character);
+    select(character);
+
+    closeCharacterCreator();
+}
+
+// ---------- PICK OBJECT ----------
+function pickObject(event) {
+    const mouse = new THREE.Vector2(
         (event.clientX / window.innerWidth) * 2 - 1,
         -(event.clientY / window.innerHeight) * 2 + 1
     );
 
-    let raycaster = new THREE.Raycaster();
-    raycaster.setFromCamera(mouse, camera);
+    const ray = new THREE.Raycaster();
+    ray.setFromCamera(mouse, camera);
 
-    let hits = raycaster.intersectObjects(scene.children);
-    if (hits.length > 0 && hits[0].object !== transformControl) {
-        attach(hits[0].object);
+    const hits = ray.intersectObjects(scene.children, true);
+    if (hits.length > 0) {
+        let obj = hits[0].object;
+        while (obj.parent && !obj.parent.isScene) obj = obj.parent;
+        select(obj);
     }
 }
 
-// ---- Save / Load ----
+// ---------- SELECT / PROPERTIES ----------
+function select(obj) {
+    selectedObject = obj;
+    transformControl.attach(obj);
+
+    updatePropertiesPanel();
+}
+
+function updatePropertiesPanel() {
+    if (!selectedObject) return;
+
+    document.getElementById("properties-content").innerHTML = `
+      <strong>Type:</strong> ${selectedObject.userData.type}<br>
+
+      <label>Color:</label>
+      <input type="color" onchange="changeColor(this.value)">
+      
+      <label>Scale:</label>
+      <input type="range" min="0.2" max="3" step="0.1"
+             value="${selectedObject.scale.x}"
+             onchange="changeScale(this.value)">
+    `;
+}
+
+function changeColor(color) {
+    selectedObject.traverse(ch => {
+        if (ch.isMesh) ch.material.color.set(color);
+    });
+}
+
+function changeScale(v) {
+    selectedObject.scale.set(v, v, v);
+}
+
+// ---------- ENVIRONMENT ----------
+function setBackground() {
+    const col = document.getElementById("bgColor").value;
+    scene.background.set(col);
+}
+
+// ---------- SAVE / LOAD ----------
 function saveScene() {
-    const data = [];
+    const save = [];
 
     scene.children.forEach(obj => {
-        if (obj.isMesh) {
-            data.push({
+        if (obj.isMesh || obj.type === "Group") {
+            save.push({
                 type: obj.userData.type,
-                position: obj.position
+                position: obj.position,
+                scale: obj.scale,
+                color: obj.children[0]?.material?.color,
             });
         }
     });
 
-    localStorage.setItem("studioScene", JSON.stringify(data));
-    alert("Scene saved!");
+    localStorage.setItem("sceneData", JSON.stringify(save));
+    alert("Game saved!");
 }
 
 function loadScene() {
-    const data = JSON.parse(localStorage.getItem("studioScene"));
-    if (!data) return alert("No saved scene!");
+    const data = JSON.parse(localStorage.getItem("sceneData"));
+    if (!data) return alert("No saved game!");
 
-    // clear meshes
-    scene.children = scene.children.filter(x => !x.isMesh);
+    scene.children = scene.children.filter(c => c.type !== "Mesh" && c.type !== "Group");
 
     data.forEach(obj => {
         if (obj.type === "cube") addCube(obj.position);
         if (obj.type === "sphere") addSphere(obj.position);
     });
 
-    alert("Scene loaded!");
+    alert("Game loaded!");
 }
 
 init();
