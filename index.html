@@ -1,1 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>No-Code Game Builder</title>
+<style>
+  body { margin: 0; overflow: hidden; font-family: Arial; color:white; }
+  #ui {
+    position: fixed; top: 10px; left: 10px;
+    width: 230px; background:#000a; padding:10px;
+  }
+  #properties-panel {
+    position: fixed; top:10px; right:10px;
+    width:230px; background:#000a; padding:10px;
+  }
+</style>
+</head>
+<body>
 
+<div id="ui">
+  <h3>No-Code Game Builder</h3>
+  <button onclick="addCube()">Add Cube</button>
+  <button onclick="addSphere()">Add Sphere</button>
+  <br><br>
+  <button onclick="connectMultiplayer()">Join Multiplayer</button>
+</div>
+
+<div id="properties-panel">
+  <h3>Properties</h3>
+  <div id="props"></div>
+</div>
+
+<div id="viewport"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.159/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.159/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.159/examples/js/controls/TransformControls.js"></script>
+
+<script src="studio.js"></script>
+</body>
+</html>
