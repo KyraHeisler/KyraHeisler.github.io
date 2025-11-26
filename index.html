@@ -2,248 +2,484 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>NovaBuilder - Roblox Studio Knockoff</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Roblox Studio Knockoff - NovaBuilder</title>
 <style>
-body { margin:0; overflow:hidden; font-family:Arial; background:#1e1e1e; color:#eee; }
-#topbar { position:fixed; top:0; left:0; width:100%; height:40px; background:#2a2a2a; display:flex; align-items:center; padding:5px 10px; z-index:10; }
-#topbar button, #topbar select { margin-right:10px; padding:6px 12px; border:none; background:#444; color:white; border-radius:4px; cursor:pointer; }
-#sidebar-left { position:fixed; top:40px; left:0; width:220px; bottom:0; background:#202020; border-right:2px solid #111; overflow-y:auto; padding:5px; }
-#sidebar-right { position:fixed; top:40px; right:0; width:260px; bottom:0; background:#202020; border-left:2px solid #111; overflow-y:auto; padding:5px; }
-#viewport { position:fixed; top:40px; left:220px; right:260px; bottom:0; background:#111; }
-.panel-title { font-weight:bold; margin:10px 0 5px; font-size:16px; }
-.panel-section { padding:5px; border-bottom:1px solid #333; }
-input, select { width:100%; padding:5px; background:#333; border:1px solid #555; color:white; margin-top:5px; }
+  /* === Reset & base === */
+  * {
+    box-sizing: border-box;
+  }
+  body, html {
+    margin: 0; padding: 0;
+    height: 100%;
+    overflow: hidden;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #181818;
+    color: #ddd;
+    user-select: none;
+  }
+  button, select, input[type=color], input[type=number] {
+    background: #282828;
+    border: 1px solid #444;
+    color: #eee;
+    padding: 5px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  button:hover, select:hover, input[type=color]:hover, input[type=number]:hover {
+    background: #3a3a3a;
+  }
+  button:disabled {
+    background: #555;
+    cursor: not-allowed;
+  }
+  #topbar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 40px;
+    background: #252525;
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    gap: 8px;
+    z-index: 1000;
+  }
+  #topbar > * {
+    height: 28px;
+  }
+  #sidebar-left, #sidebar-right {
+    position: fixed;
+    top: 40px;
+    bottom: 0;
+    background: #212121;
+    overflow-y: auto;
+    padding: 10px;
+    font-size: 14px;
+  }
+  #sidebar-left {
+    left: 0;
+    width: 230px;
+    border-right: 2px solid #111;
+  }
+  #sidebar-right {
+    right: 0;
+    width: 280px;
+    border-left: 2px solid #111;
+  }
+  #viewport {
+    position: fixed;
+    top: 40px;
+    left: 230px;
+    right: 280px;
+    bottom: 0;
+    background: #111;
+    overflow: hidden;
+  }
+  .panel-title {
+    font-weight: 700;
+    font-size: 16px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid #444;
+    padding-bottom: 6px;
+  }
+  #hierarchy div {
+    padding: 4px 6px;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+  #hierarchy div.selected {
+    background: #3a81f7;
+  }
+  #properties label {
+    display: block;
+    margin-top: 10px;
+    font-weight: 600;
+  }
+  #properties input[type=number], #properties input[type=color], #properties select {
+    width: 100%;
+    margin-top: 3px;
+    color: #eee;
+  }
+  #terrainMaterial {
+    height: 28px;
+  }
+  #modeIndicator {
+    margin-left: auto;
+    font-weight: 700;
+    font-size: 14px;
+    color: #7acaff;
+    user-select: none;
+  }
 </style>
 </head>
 <body>
-  
-<div id="topbar">
-  <button onclick="addObject('cube')">Add Cube</button>
-  <button onclick="addObject('sphere')">Add Sphere</button>
-  <button onclick="generateHybridTerrain()">Add Terrain</button>
-  <select id="terrainPaint" onchange="selectTerrainMaterial(this.value)">
-    <option value="0x228833">Grass</option>
-    <option value="0x888888">Rock</option>
-    <option value="0xffdd99">Sand</option>
-  </select>
-  <input type="color" id="objColor" value="#00aaff" onchange="changeObjectColor(this.value)">
-  <button id="playBtn" onclick="togglePlay()">Play</button>
-</div>
+  <div id="topbar">
+    <button id="btnAddCube" title="Add Cube">Add Cube</button>
+    <button id="btnAddSphere" title="Add Sphere">Add Sphere</button>
+    <button id="btnAddTerrain" title="Add Hybrid Terrain">Add Terrain</button>
+    <select id="terrainMaterial" title="Select Terrain Paint Material" aria-label="Terrain Material">
+      <option value="grass">Grass</option>
+      <option value="rock">Rock</option>
+      <option value="sand">Sand</option>
+    </select>
+    <input type="color" id="colorPicker" title="Change Object Color" value="#00aaff" aria-label="Object Color Picker" />
+    <button id="btnPlay" title="Play/Stop">Play</button>
+    <div id="modeIndicator">Edit Mode</div>
+  </div>
+  <div id="sidebar-left">
+    <div class="panel-title">Workspace</div>
+    <div id="hierarchy" role="tree" tabindex="0" aria-label="Hierarchy Panel"></div>
+  </div>
+  <div id="sidebar-right">
+    <div class="panel-title">Properties</div>
+    <div id="properties">Select an object</div>
+  </div>
+  <div id="viewport" tabindex="0" aria-label="3D Viewport"></div>
 
-<div id="sidebar-left">
-  <div class="panel-title">Workspace</div>
-  <div id="hierarchy" class="panel-section"></div>
-</div>
+  <!-- Three.js & Controls -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.159/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.159/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.159/examples/js/controls/TransformControls.js"></script>
 
-<div id="sidebar-right">
-  <div class="panel-title">Properties</div>
-  <div id="properties" class="panel-section">Select an object</div>
-</div>
+  <script>
+  (() => {
+    // === Globals ===
+    let scene, camera, renderer, orbit, transform;
+    let selected = null;
+    let objects = [];
+    let terrain = null;
+    let isPlayMode = false;
+    let player = null;
+    let playerVelocity = new THREE.Vector3();
+    let keys = {};
+    let terrainMaterial = 'grass';
+    const terrainMaterials = {
+      grass: 0x228833,
+      rock: 0x888888,
+      sand: 0xffdd99
+    };
 
-<div id="viewport"></div>
+    const viewport = document.getElementById('viewport');
+    const hierarchy = document.getElementById('hierarchy');
+    const properties = document.getElementById('properties');
+    const btnAddCube = document.getElementById('btnAddCube');
+    const btnAddSphere = document.getElementById('btnAddSphere');
+    const btnAddTerrain = document.getElementById('btnAddTerrain');
+    const btnPlay = document.getElementById('btnPlay');
+    const terrainMaterialSelect = document.getElementById('terrainMaterial');
+    const colorPicker = document.getElementById('colorPicker');
+    const modeIndicator = document.getElementById('modeIndicator');
 
-<script src="https://cdn.jsdelivr.net/npm/three@0.159/build/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.159/examples/js/controls/OrbitControls.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.159/examples/js/controls/TransformControls.js"></script>
+    let idCounter = 0;
 
-<script>
-// ========================
-// GLOBALS
-// ========================
-let scene, camera, renderer, orbit, transform;
-let selected = null, objects = [], terrain = null;
-let isPlayMode = false, player = null, playerVelocity = new THREE.Vector3();
-let keys = {};
-let terrainMaterialColor = 0x228833;
+    // === Initialization ===
+    function init() {
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x262626);
 
-// ========================
-// INIT
-// ========================
-function init() {
-    scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x262626);
+      const aspect = window.innerWidth / window.innerHeight;
+      camera = new THREE.PerspectiveCamera(60, aspect, 0.1, 500);
+      camera.position.set(10, 10, 10);
 
-    camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 500);
-    camera.position.set(8,8,8);
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(viewport.clientWidth, viewport.clientHeight);
+      viewport.appendChild(renderer.domElement);
 
-    renderer = new THREE.WebGLRenderer({ antialias:true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    document.getElementById("viewport").appendChild(renderer.domElement);
+      orbit = new THREE.OrbitControls(camera, renderer.domElement);
+      orbit.enableDamping = true;
+      orbit.dampingFactor = 0.05;
 
-    orbit = new THREE.OrbitControls(camera, renderer.domElement);
+      transform = new THREE.TransformControls(camera, renderer.domElement);
+      transform.addEventListener('dragging-changed', (event) => {
+        orbit.enabled = !event.value;
+        updatePropertiesPanel();
+      });
+      transform.addEventListener('objectChange', () => {
+        updatePropertiesPanel();
+        refreshHierarchy();
+      });
+      scene.add(transform);
 
-    transform = new THREE.TransformControls(camera, renderer.domElement);
-    transform.addEventListener("dragging-changed", e => orbit.enabled = !e.value);
-    scene.add(transform);
+      // Lights
+      const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+      dirLight.position.set(10, 20, 10);
+      scene.add(dirLight);
+      scene.add(new THREE.AmbientLight(0xffffff, 0.3));
 
-    const light = new THREE.DirectionalLight(0xffffff, 1);
-    light.position.set(10,20,10);
-    scene.add(light);
+      // Grid Helper
+      const grid = new THREE.GridHelper(200, 200, 0x666666, 0x333333);
+      scene.add(grid);
 
-    scene.add(new THREE.AmbientLight(0xffffff,0.3));
+      // Event Listeners
+      window.addEventListener('resize', onWindowResize);
+      viewport.addEventListener('click', onViewportClick);
 
-    scene.add(new THREE.GridHelper(200,200));
+      btnAddCube.addEventListener('click', () => addObject('cube'));
+      btnAddSphere.addEventListener('click', () => addObject('sphere'));
+      btnAddTerrain.addEventListener('click', () => generateHybridTerrain());
+      btnPlay.addEventListener('click', togglePlay);
+      terrainMaterialSelect.addEventListener('change', (e) => {
+        terrainMaterial = e.target.value;
+        if (terrain) {
+          terrain.material.color.setHex(terrainMaterials[terrainMaterial]);
+        }
+      });
+      colorPicker.addEventListener('input', (e) => {
+        if (selected && selected !== terrain) {
+          selected.material.color.set(e.target.value);
+          updatePropertiesPanel();
+        }
+      });
+      hierarchy.addEventListener('click', (e) => {
+        if (e.target && e.target.dataset.id) {
+          selectObjectById(e.target.dataset.id);
+        }
+      });
 
-    animate();
-}
+      // Keyboard controls for play mode
+      window.addEventListener('keydown', (e) => { keys[e.key.toLowerCase()] = true; });
+      window.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
 
-// ========================
-// ANIMATE
-// ========================
-function animate() {
-    requestAnimationFrame(animate);
-
-    if(isPlayMode && player){
-        if(!isGrounded(player)){
-            playerVelocity.y += -0.5*0.02;
-        } else { playerVelocity.y = Math.max(0, playerVelocity.y); }
-
-        if(keys['w']) player.position.z -= 0.2;
-        if(keys['s']) player.position.z += 0.2;
-        if(keys['a']) player.position.x -= 0.2;
-        if(keys['d']) player.position.x += 0.2;
-        if(keys[' ']) playerVelocity.y = 0.5;
-
-        player.position.y += playerVelocity.y;
-        camera.position.set(player.position.x+5,player.position.y+5,player.position.z+5);
-        camera.lookAt(player.position);
+      animate();
     }
 
-    renderer.render(scene, camera);
-}
+    // === Animation Loop ===
+    function animate() {
+      requestAnimationFrame(animate);
 
-// ========================
-// OBJECTS
-// ========================
-let idCounter = 0;
-function addObject(type){
-    if(isPlayMode) return;
-    let mesh;
-    if(type==='cube') mesh = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshStandardMaterial({color:0x00aaff}));
-    if(type==='sphere') mesh = new THREE.Mesh(new THREE.SphereGeometry(0.6,32,32), new THREE.MeshStandardMaterial({color:0xff6666}));
-    mesh.position.set(0,1,0);
-    mesh.userData.id = "obj"+(idCounter++);
-    mesh.userData.type = type;
-    scene.add(mesh);
-    objects.push(mesh);
-    refreshHierarchy();
-}
-
-function refreshHierarchy(){
-    let html = '';
-    objects.forEach(o => html += `<div onclick="selectObject('${o.userData.id}')">${o.userData.id} (${o.userData.type})</div>`);
-    if(terrain) html += `<div onclick="selectObject('terrain')">Terrain</div>`;
-    document.getElementById("hierarchy").innerHTML = html;
-}
-
-function selectObject(id){
-    if(id==='terrain') selected = terrain;
-    else selected = objects.find(o=>o.userData.id===id);
-    if(selected) transform.attach(selected);
-    updatePropertiesPanel();
-}
-
-function updatePropertiesPanel(){
-    if(!selected) return;
-    document.getElementById("properties").innerHTML = `
-        <label>Position X</label><input type="number" value="${selected.position.x}" onchange="selected.position.x=parseFloat(this.value)">
-        <label>Position Y</label><input type="number" value="${selected.position.y}" onchange="selected.position.y=parseFloat(this.value)">
-        <label>Position Z</label><input type="number" value="${selected.position.z}" onchange="selected.position.z=parseFloat(this.value)">
-    `;
-}
-
-function changeObjectColor(color){
-    if(selected && selected!==terrain){
-        selected.material.color.set(color);
+      if (isPlayMode && player) {
+        updatePlayerPhysics();
+      }
+      orbit.update();
+      renderer.render(scene, camera);
     }
-}
 
-// ========================
-// TERRAIN
-// ========================
-function generateHybridTerrain(){
-    if(isPlayMode) return;
-    const size = 200, segments=200, flatRadius=40, maxHeight=25;
-    const geometry = new THREE.PlaneGeometry(size,size,segments,segments);
-    geometry.rotateX(-Math.PI/2);
-    const pos = geometry.attributes.position;
-
-    for(let i=0;i<pos.count;i++){
-        let x = pos.getX(i), z=pos.getZ(i);
-        const dist = Math.sqrt(x*x+z*z);
-        if(dist<flatRadius){ pos.setY(i,0); continue; }
-        let factor=(dist-flatRadius)/(size/2-flatRadius);
-        factor=Math.min(1,Math.max(0,factor));
-        const height = Math.sin(x*0.08)*Math.cos(z*0.08)*8 + Math.sin(x*0.15)*4 + factor*maxHeight;
-        pos.setY(i,height);
+    // === Window Resize ===
+    function onWindowResize() {
+      const w = viewport.clientWidth;
+      const h = viewport.clientHeight;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
     }
-    pos.needsUpdate = true;
-    geometry.computeVertexNormals();
 
-    const material = new THREE.MeshStandardMaterial({color:terrainMaterialColor, roughness:1});
-    terrain = new THREE.Mesh(geometry, material);
-    terrain.receiveShadow = true;
-    terrain.name='terrain';
-    scene.add(terrain);
-    refreshHierarchy();
-}
-
-function selectTerrainMaterial(color){
-    terrainMaterialColor = parseInt(color);
-    if(terrain) terrain.material.color.set(color);
-}
-
-// ========================
-// PLAY MODE
-// ========================
-function togglePlay(){
-    isPlayMode = !isPlayMode;
-    const btn = document.getElementById('playBtn');
-    if(isPlayMode){
-        btn.innerText='Stop';
-        transform.detach();
-        player = new THREE.Mesh(new THREE.BoxGeometry(1,1.8,1), new THREE.MeshStandardMaterial({color:0xffaa00}));
-        player.position.set(0,5,0);
-        scene.add(player);
-    } else {
-        btn.innerText='Play';
-        if(player) scene.remove(player);
-        player=null;
+    // === Add Objects ===
+    function addObject(type) {
+      if (isPlayMode) return;
+      let mesh;
+      if (type === 'cube') {
+        mesh = new THREE.Mesh(
+          new THREE.BoxGeometry(1, 1, 1),
+          new THREE.MeshStandardMaterial({ color: 0x00aaff })
+        );
+      } else if (type === 'sphere') {
+        mesh = new THREE.Mesh(
+          new THREE.SphereGeometry(0.6, 32, 32),
+          new THREE.MeshStandardMaterial({ color: 0xff6666 })
+        );
+      }
+      mesh.position.set(0, 1, 0);
+      mesh.userData.id = `obj${idCounter++}`;
+      mesh.userData.type = type;
+      scene.add(mesh);
+      objects.push(mesh);
+      selectObject(mesh);
+      refreshHierarchy();
     }
-}
 
-function isGrounded(obj){
-    if(!obj) return false;
-    if(!terrain) return obj.position.y<=0;
-    return obj.position.y<=getTerrainHeight(obj.position.x,obj.position.z)+0.1;
-}
+    // === Generate Hybrid Terrain ===
+    function generateHybridTerrain() {
+      if (isPlayMode) return;
+      if (terrain) {
+        scene.remove(terrain);
+        terrain.geometry.dispose();
+        terrain.material.dispose();
+        terrain = null;
+      }
+      const size = 200, segments = 200, flatRadius = 40, maxHeight = 25;
+      const geometry = new THREE.PlaneGeometry(size, size, segments, segments);
+      geometry.rotateX(-Math.PI / 2);
+      const pos = geometry.attributes.position;
 
-function getTerrainHeight(x,z,terrain){
-    const geom=terrain.geometry, size=200, segments=200, half=size/2, step=size/segments;
-    const ix = Math.floor((x+half)/step);
-    const iz = Math.floor((z+half)/step);
-    const idx = ix + iz*(segments+1);
-    if(idx<0||idx>=geom.attributes.position.count) return 0;
-    return geom.attributes.position.getY(idx);
-}
+      for (let i = 0; i < pos.count; i++) {
+        let x = pos.getX(i), z = pos.getZ(i);
+        const dist = Math.sqrt(x * x + z * z);
+        if (dist < flatRadius) {
+          pos.setY(i, 0);
+          continue;
+        }
+        let factor = (dist - flatRadius) / (size / 2 - flatRadius);
+        factor = Math.min(1, Math.max(0, factor));
+        const height =
+          Math.sin(x * 0.08) * Math.cos(z * 0.08) * 8 +
+          Math.sin(x * 0.15) * 4 +
+          factor * maxHeight;
+        pos.setY(i, height);
+      }
+      pos.needsUpdate = true;
+      geometry.computeVertexNormals();
 
-// ========================
-// INPUT
-// ========================
-window.addEventListener('keydown', e=>keys[e.key.toLowerCase()]=true);
-window.addEventListener('keyup', e=>keys[e.key.toLowerCase()]=false);
-window.addEventListener('resize',()=>{ camera.aspect=window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth,window.innerHeight); });
+      const material = new THREE.MeshStandardMaterial({
+        color: terrainMaterials[terrainMaterial],
+        roughness: 1,
+      });
+      terrain = new THREE.Mesh(geometry, material);
+      terrain.receiveShadow = true;
+      terrain.userData.id = 'terrain';
+      scene.add(terrain);
+      selectObject(terrain);
+      refreshHierarchy();
+    }
 
-init();
-</script>
-</body>
-</html>
-#viewport {
-  position: fixed;
-  top: 40px;
-  left: 220px;
-  right: 260px;
-  bottom: 0;
-  background: #111;
-}
+    // === Refresh Hierarchy Panel ===
+    function refreshHierarchy() {
+      let html = '';
+      if (terrain) html += `<div data-id="terrain" class="${selected === terrain ? 'selected' : ''}">Terrain</div>`;
+      objects.forEach((obj) => {
+        html += `<div data-id="${obj.userData.id}" class="${selected === obj ? 'selected' : ''}">
+          ${obj.userData.id} (${obj.userData.type})
+        </div>`;
+      });
+      hierarchy.innerHTML = html;
+    }
+
+    // === Select Object by Id ===
+    function selectObjectById(id) {
+      if (id === 'terrain') {
+        selectObject(terrain);
+      } else {
+        const obj = objects.find((o) => o.userData.id === id);
+        if (obj) selectObject(obj);
+      }
+    }
+
+    // === Select Object ===
+    function selectObject(obj) {
+      if (isPlayMode) return;
+      selected = obj;
+      transform.attach(selected);
+      updatePropertiesPanel();
+      refreshHierarchy();
+      // Update color picker
+      if (selected && selected.material && selected.material.color) {
+        colorPicker.value = '#' + selected.material.color.getHexString();
+      }
+    }
+
+    // === Update Properties Panel ===
+    function updatePropertiesPanel() {
+      if (!selected) {
+        properties.innerHTML = 'Select an object';
+        return;
+      }
+      const pos = selected.position;
+      const rot = selected.rotation;
+      const scale = selected.scale;
+
+      // Compose HTML for properties
+      properties.innerHTML = `
+        <label for="posX">Position X</label>
+        <input type="number" id="posX" step="0.1" value="${pos.x.toFixed(2)}" />
+        <label for="posY">Position Y</label>
+        <input type="number" id="posY" step="0.1" value="${pos.y.toFixed(2)}" />
+        <label for="posZ">Position Z</label>
+        <input type="number" id="posZ" step="0.1" value="${pos.z.toFixed(2)}" />
+        
+        <label for="rotX">Rotation X</label>
+        <input type="number" id="rotX" step="0.1" value="${THREE.MathUtils.radToDeg(rot.x).toFixed(1)}" />
+        <label for="rotY">Rotation Y</label>
+        <input type="number" id="rotY" step="0.1" value="${THREE.MathUtils.radToDeg(rot.y).toFixed(1)}" />
+        <label for="rotZ">Rotation Z</label>
+        <input type="number" id="rotZ" step="0.1" value="${THREE.MathUtils.radToDeg(rot.z).toFixed(1)}" />
+        
+        <label for="scaleX">Scale X</label>
+        <input type="number" id="scaleX" step="0.1" min="0.1" value="${scale.x.toFixed(2)}" />
+        <label for="scaleY">Scale Y</label>
+        <input type="number" id="scaleY" step="0.1" min="0.1" value="${scale.y.toFixed(2)}" />
+        <label for="scaleZ">Scale Z</label>
+        <input type="number" id="scaleZ" step="0.1" min="0.1" value="${scale.z.toFixed(2)}" />
+      `;
+
+      // Attach event listeners for inputs
+      ['posX', 'posY', 'posZ'].forEach((id) => {
+        document.getElementById(id).oninput = (e) => {
+          selected.position[id[3].toLowerCase()] = parseFloat(e.target.value);
+          refreshHierarchy();
+        };
+      });
+      ['rotX', 'rotY', 'rotZ'].forEach((id) => {
+        document.getElementById(id).oninput = (e) => {
+          const deg = parseFloat(e.target.value);
+          if (!isNaN(deg)) {
+            selected.rotation[id[3].toLowerCase()] = THREE.MathUtils.degToRad(deg);
+            refreshHierarchy();
+          }
+        };
+      });
+      ['scaleX', 'scaleY', 'scaleZ'].forEach((id) => {
+        document.getElementById(id).oninput = (e) => {
+          const val = parseFloat(e.target.value);
+          if (val > 0) {
+            selected.scale[id[5].toLowerCase()] = val;
+            refreshHierarchy();
+          }
+        };
+      });
+    }
+
+    // === Play Mode Toggle ===
+    function togglePlay() {
+      if (!isPlayMode) {
+        enterPlayMode();
+      } else {
+        exitPlayMode();
+      }
+    }
+
+    // === Enter Play Mode ===
+    function enterPlayMode() {
+      if (isPlayMode) return;
+      if (!terrain) {
+        alert('Please add terrain before playing.');
+        return;
+      }
+      isPlayMode = true;
+      modeIndicator.textContent = 'Play Mode';
+      btnPlay.textContent = 'Stop';
+
+      // Detach transform gizmo
+      transform.detach();
+
+      // Disable UI buttons except Stop
+      btnAddCube.disabled = true;
+      btnAddSphere.disabled = true;
+      btnAddTerrain.disabled = true;
+      terrainMaterialSelect.disabled = true;
+      colorPicker.disabled = true;
+
+      // Spawn player cube
+      player = new THREE.Mesh(
+        new THREE.BoxGeometry(1, 1.8, 1),
+        new THREE.MeshStandardMaterial({ color: 0xffaa00 })
+      );
+      player.position.set(0, 5, 0);
+      scene.add(player);
+
+      // Set camera behind player
+      camera.position.set(player.position.x + 5, player.position.y + 5, player.position.z + 5);
+      camera.lookAt(player.position);
+
+      // Disable orbit controls (mouse)
+      orbit.enabled = false;
+
+      // Remove selection highlight
+      selected = null;
+      refreshHierarchy();
+      updatePropertiesPanel();
+    }
+
+    // === Exit Play Mode ===
+    function exitPlayMode() {
+      if (!isPlayMode
