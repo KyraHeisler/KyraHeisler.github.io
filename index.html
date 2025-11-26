@@ -3,11 +3,11 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>NovaBuilder — Game Studio</title>
+<title>NovaBuilder - Roblox Studio Knockoff</title>
 <style>
-body { margin:0; overflow:hidden; font-family:Arial; background:#1a1a1a; color:#eee; }
-#topbar { position:fixed; top:0; left:0; width:100%; height:40px; background:#2c2c2c; display:flex; align-items:center; padding:5px 10px; z-index:10; }
-#topbar button { margin-right:10px; padding:6px 12px; border:none; background:#444; color:white; border-radius:4px; cursor:pointer; }
+body { margin:0; overflow:hidden; font-family:Arial; background:#1e1e1e; color:#eee; }
+#topbar { position:fixed; top:0; left:0; width:100%; height:40px; background:#2a2a2a; display:flex; align-items:center; padding:5px 10px; z-index:10; }
+#topbar button, #topbar select { margin-right:10px; padding:6px 12px; border:none; background:#444; color:white; border-radius:4px; cursor:pointer; }
 #sidebar-left { position:fixed; top:40px; left:0; width:220px; bottom:0; background:#202020; border-right:2px solid #111; overflow-y:auto; padding:5px; }
 #sidebar-right { position:fixed; top:40px; right:0; width:260px; bottom:0; background:#202020; border-left:2px solid #111; overflow-y:auto; padding:5px; }
 #viewport { position:fixed; top:40px; left:220px; right:260px; bottom:0; background:#111; }
@@ -17,11 +17,17 @@ input, select { width:100%; padding:5px; background:#333; border:1px solid #555;
 </style>
 </head>
 <body>
-  
+
 <div id="topbar">
   <button onclick="addObject('cube')">Add Cube</button>
   <button onclick="addObject('sphere')">Add Sphere</button>
   <button onclick="generateHybridTerrain()">Add Terrain</button>
+  <select id="terrainPaint" onchange="selectTerrainMaterial(this.value)">
+    <option value="0x228833">Grass</option>
+    <option value="0x888888">Rock</option>
+    <option value="0xffdd99">Sand</option>
+  </select>
+  <input type="color" id="objColor" value="#00aaff" onchange="changeObjectColor(this.value)">
   <button id="playBtn" onclick="togglePlay()">Play</button>
 </div>
 
@@ -43,19 +49,16 @@ input, select { width:100%; padding:5px; background:#333; border:1px solid #555;
 
 <script>
 // ========================
-// GLOBAL VARIABLES
+// GLOBALS
 // ========================
 let scene, camera, renderer, orbit, transform;
-let selected = null;
-let objects = [];
-let isPlayMode = false;
-let player = null;
-let playerVelocity = new THREE.Vector3();
-const gravity = -0.5;
+let selected = null, objects = [], terrain = null;
+let isPlayMode = false, player = null, playerVelocity = new THREE.Vector3();
 let keys = {};
+let terrainMaterialColor = 0x228833;
 
 // ========================
-// INIT FUNCTION
+// INIT
 // ========================
 function init() {
     scene = new THREE.Scene();
@@ -78,26 +81,22 @@ function init() {
     light.position.set(10,20,10);
     scene.add(light);
 
-    const ambient = new THREE.AmbientLight(0xffffff,0.3);
-    scene.add(ambient);
+    scene.add(new THREE.AmbientLight(0xffffff,0.3));
 
-    // Grid helper
-    const grid = new THREE.GridHelper(200,200);
-    scene.add(grid);
+    scene.add(new THREE.GridHelper(200,200));
 
     animate();
 }
 
 // ========================
-// ANIMATION LOOP
+// ANIMATE
 // ========================
 function animate() {
     requestAnimationFrame(animate);
 
     if(isPlayMode && player){
-        // Basic physics
         if(!isGrounded(player)){
-            playerVelocity.y += gravity * 0.02;
+            playerVelocity.y += -0.5*0.02;
         } else { playerVelocity.y = Math.max(0, playerVelocity.y); }
 
         if(keys['w']) player.position.z -= 0.2;
@@ -115,7 +114,7 @@ function animate() {
 }
 
 // ========================
-// OBJECT FUNCTIONS
+// OBJECTS
 // ========================
 let idCounter = 0;
 function addObject(type){
@@ -134,12 +133,13 @@ function addObject(type){
 function refreshHierarchy(){
     let html = '';
     objects.forEach(o => html += `<div onclick="selectObject('${o.userData.id}')">${o.userData.id} (${o.userData.type})</div>`);
-    if(scene.getObjectByName('terrain')) html += `<div onclick="selectObject('terrain')">Terrain</div>`;
+    if(terrain) html += `<div onclick="selectObject('terrain')">Terrain</div>`;
     document.getElementById("hierarchy").innerHTML = html;
 }
 
 function selectObject(id){
-    selected = objects.find(o => o.userData.id===id) || scene.getObjectByName(id);
+    if(id==='terrain') selected = terrain;
+    else selected = objects.find(o=>o.userData.id===id);
     if(selected) transform.attach(selected);
     updatePropertiesPanel();
 }
@@ -153,40 +153,45 @@ function updatePropertiesPanel(){
     `;
 }
 
+function changeObjectColor(color){
+    if(selected && selected!==terrain){
+        selected.material.color.set(color);
+    }
+}
+
 // ========================
-// TERRAIN GENERATOR
+// TERRAIN
 // ========================
 function generateHybridTerrain(){
     if(isPlayMode) return;
-    const size = 200;
-    const segments = 200;
-    const flatRadius = 40;
-    const maxMountainHeight = 25;
-
+    const size = 200, segments=200, flatRadius=40, maxHeight=25;
     const geometry = new THREE.PlaneGeometry(size,size,segments,segments);
     geometry.rotateX(-Math.PI/2);
     const pos = geometry.attributes.position;
 
     for(let i=0;i<pos.count;i++){
-        let x = pos.getX(i);
-        let z = pos.getZ(i);
+        let x = pos.getX(i), z=pos.getZ(i);
         const dist = Math.sqrt(x*x+z*z);
         if(dist<flatRadius){ pos.setY(i,0); continue; }
-        let factor = (dist-flatRadius)/(size/2-flatRadius);
-        factor = Math.min(1,Math.max(0,factor));
-        const height = Math.sin(x*0.08)*Math.cos(z*0.08)*8 + Math.sin(x*0.15)*4 + factor*maxMountainHeight;
+        let factor=(dist-flatRadius)/(size/2-flatRadius);
+        factor=Math.min(1,Math.max(0,factor));
+        const height = Math.sin(x*0.08)*Math.cos(z*0.08)*8 + Math.sin(x*0.15)*4 + factor*maxHeight;
         pos.setY(i,height);
     }
-
     pos.needsUpdate = true;
     geometry.computeVertexNormals();
 
-    const material = new THREE.MeshStandardMaterial({color:0x228833, roughness:1});
-    const terrain = new THREE.Mesh(geometry,material);
+    const material = new THREE.MeshStandardMaterial({color:terrainMaterialColor, roughness:1});
+    terrain = new THREE.Mesh(geometry, material);
     terrain.receiveShadow = true;
     terrain.name='terrain';
     scene.add(terrain);
     refreshHierarchy();
+}
+
+function selectTerrainMaterial(color){
+    terrainMaterialColor = parseInt(color);
+    if(terrain) terrain.material.color.set(color);
 }
 
 // ========================
@@ -197,49 +202,37 @@ function togglePlay(){
     const btn = document.getElementById('playBtn');
     if(isPlayMode){
         btn.innerText='Stop';
-        // Disable editing
         transform.detach();
-        // Spawn player
-        player = new THREE.Mesh(new THREE.BoxGeometry(1,1.8,1),new THREE.MeshStandardMaterial({color:0xffaa00}));
+        player = new THREE.Mesh(new THREE.BoxGeometry(1,1.8,1), new THREE.MeshStandardMaterial({color:0xffaa00}));
         player.position.set(0,5,0);
         scene.add(player);
     } else {
         btn.innerText='Play';
-        // Remove player
         if(player) scene.remove(player);
-        player = null;
+        player=null;
     }
 }
 
 function isGrounded(obj){
     if(!obj) return false;
-    let terrain = scene.getObjectByName('terrain');
     if(!terrain) return obj.position.y<=0;
-    const pos = obj.position;
-    // approximate ground by terrain height
-    const terrainHeight = getTerrainHeight(pos.x,pos.z,terrain);
-    return pos.y<=terrainHeight+0.1;
+    return obj.position.y<=getTerrainHeight(obj.position.x,obj.position.z)+0.1;
 }
 
 function getTerrainHeight(x,z,terrain){
-    const geom = terrain.geometry;
-    const size = 200;
-    const segments = 200;
-    const half = size/2;
-    const step = size/segments;
+    const geom=terrain.geometry, size=200, segments=200, half=size/2, step=size/segments;
     const ix = Math.floor((x+half)/step);
     const iz = Math.floor((z+half)/step);
     const idx = ix + iz*(segments+1);
-    if(idx<0 || idx>=geom.attributes.position.count) return 0;
+    if(idx<0||idx>=geom.attributes.position.count) return 0;
     return geom.attributes.position.getY(idx);
 }
 
 // ========================
 // INPUT
 // ========================
-window.addEventListener('keydown', e => keys[e.key.toLowerCase()]=true);
-window.addEventListener('keyup', e => keys[e.key.toLowerCase()]=false);
-
+window.addEventListener('keydown', e=>keys[e.key.toLowerCase()]=true);
+window.addEventListener('keyup', e=>keys[e.key.toLowerCase()]=false);
 window.addEventListener('resize',()=>{ camera.aspect=window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth,window.innerHeight); });
 
 init();
