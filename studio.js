@@ -1,89 +1,62 @@
-let scene, camera, renderer, orbit, transform;
-let socket, playerId = null;
-let otherPlayers = {};
-let player;
+// =====================================================
+//   HYBRID TERRAIN: FLAT CENTER + MOUNTAINS OUTSIDE
+// =====================================================
 
-function init() {
-    scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x222222);
+function generateHybridTerrain() {
+    const size = 200;                // Total terrain size
+    const segments = 200;            // Detail level
+    const flatRadius = 40;           // How large the flat center is
+    const maxMountainHeight = 25;    // Max height of mountains
 
-    camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 1000);
-    camera.position.set(6,6,10);
+    const geometry = new THREE.PlaneGeometry(size, size, segments, segments);
+    geometry.rotateX(-Math.PI / 2);
 
-    renderer = new THREE.WebGLRenderer({ antialias:true });
-    renderer.setSize(innerWidth, innerHeight);
-    document.getElementById("viewport").appendChild(renderer.domElement);
+    const pos = geometry.attributes.position;
 
-    orbit = new THREE.OrbitControls(camera, renderer.domElement);
+    for (let i = 0; i < pos.count; i++) {
+        let x = pos.getX(i);
+        let z = pos.getZ(i);
 
-    transform = new THREE.TransformControls(camera, renderer.domElement);
-    transform.addEventListener("dragging-changed", e => orbit.enabled = !e.value);
-    scene.add(transform);
+        // Distance from center
+        const dist = Math.sqrt(x * x + z * z);
 
-    // Player
-    player = new THREE.Mesh(
-        new THREE.BoxGeometry(1, 1.8, 1),
-        new THREE.MeshStandardMaterial({ color:0x00ffaa })
-    );
-    player.position.set(0,1,0);
-    scene.add(player);
+        // ----- FLAT CENTER -----
+        if (dist < flatRadius) {
+            pos.setY(i, 0);
+            continue;
+        }
 
-    animate();
-}
+        // ----- MOUNTAIN AREA -----
+        // How far outside the flat center
+        let mountainFactor = (dist - flatRadius) / (size / 2 - flatRadius);
 
-function animate() {
-    requestAnimationFrame(animate);
+        // Clamp 0 → 1
+        mountainFactor = Math.min(1, Math.max(0, mountainFactor));
 
-    if (socket && playerId) {
-        socket.send(JSON.stringify({
-            type: "move",
-            position: player.position
-        }));
+        // Use Perlin-like noise + falloff
+        const height =
+            Math.sin(x * 0.08) * Math.cos(z * 0.08) * 8 +
+            Math.sin(x * 0.15) * 4 +
+            mountainFactor * maxMountainHeight;
+
+        pos.setY(i, height);
     }
 
-    renderer.render(scene, camera);
+    pos.needsUpdate = true;
+    geometry.computeVertexNormals();
+
+    const material = new THREE.MeshStandardMaterial({
+        color: 0x228833,
+        roughness: 1,
+        flatShading: false
+    });
+
+    const terrain = new THREE.Mesh(geometry, material);
+    terrain.receiveShadow = true;
+
+    terrain.userData.id = "terrain";
+    terrain.userData.type = "terrain";
+
+    scene.add(terrain);
+    refreshHierarchy();
 }
-
-function addCube() {
-    let m = new THREE.Mesh(
-        new THREE.BoxGeometry(1,1,1),
-        new THREE.MeshStandardMaterial({ color:0x3399ff })
-    );
-    m.position.set(0,1,0);
-    scene.add(m);
-}
-
-function addSphere() {
-    let m = new THREE.Mesh(
-        new THREE.SphereGeometry(0.6),
-        new THREE.MeshStandardMaterial({ color:0xff4444 })
-    );
-    m.position.set(0,1,0);
-    scene.add(m);
-}
-
-function connectMultiplayer() {
-    socket = new WebSocket("ws://localhost:8080");
-
-    socket.onmessage = e => {
-        let data = JSON.parse(e.data);
-
-        if (data.type === "init") playerId = data.id;
-
-        if (data.type === "playerMove") {
-            if (!otherPlayers[data.id]) {
-                let p = new THREE.Mesh(
-                    new THREE.BoxGeometry(1,1.8,1),
-                    new THREE.MeshStandardMaterial({ color:0xff00ff })
-                );
-                otherPlayers[data.id] = p;
-                scene.add(p);
-            }
-            otherPlayers[data.id].position.set(
-                data.position.x, data.position.y, data.position.z
-            );
-        }
-    };
-}
-
-init();
