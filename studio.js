@@ -25,7 +25,7 @@ function generateHybridTerrain() {
             pos.setY(i, 0);
             continue;
         }
-
+        
         // ----- MOUNTAIN AREA -----
         // How far outside the flat center
         let mountainFactor = (dist - flatRadius) / (size / 2 - flatRadius);
