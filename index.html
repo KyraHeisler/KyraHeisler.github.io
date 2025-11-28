@@ -5,38 +5,40 @@
     <title>Interactive 3D World</title>
 
     <style>
-        body { margin: 0; overflow: hidden; }
-        canvas { display: block; }
+        body { margin: 0; overflow: hidden; background: black; }
         #instructions {
             position: absolute;
             top: 0; left: 0;
             width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85);
+            background: rgba(0,0,0,0.8);
             color: white;
+            font-size: 32px;
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 28px;
-            text-align: center;
             cursor: pointer;
+            text-align: center;
         }
     </style>
 </head>
 <body>
 
-<div id="instructions">Click to start<br>WASD + Mouse to Move</div>
+<div id="instructions">Click to Start<br><br>WASD = Move<br>Mouse = Look Around</div>
 
 <script type="module">
+
+// -----------------------------------------------------
+// IMPORTS
+// -----------------------------------------------------
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.158/build/three.module.js";
 import { PointerLockControls } from "https://cdn.jsdelivr.net/npm/three@0.158/examples/jsm/controls/PointerLockControls.js";
 
 
-// ---------------------------------------------------------
-// BASIC THREE SETUP
-// ---------------------------------------------------------
-
+// -----------------------------------------------------
+// SCENE + CAMERA + RENDERER
+// -----------------------------------------------------
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x87ceeb);  // sky blue
+scene.background = new THREE.Color(0x87ceeb); // sky blue
 
 const camera = new THREE.PerspectiveCamera(
     75,
@@ -44,28 +46,26 @@ const camera = new THREE.PerspectiveCamera(
     0.1,
     2000
 );
-camera.position.set(0, 5, 10);
+camera.position.set(0, 10, 10);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
 
-// ---------------------------------------------------------
-// LIGHTING
-// ---------------------------------------------------------
+// -----------------------------------------------------
+// LIGHTS
+// -----------------------------------------------------
+const light = new THREE.DirectionalLight(0xffffff, 1);
+light.position.set(100, 200, 100);
+scene.add(light);
 
-const sun = new THREE.DirectionalLight(0xffffff, 1);
-sun.position.set(100, 200, 50);
-scene.add(sun);
-
-scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+scene.add(new THREE.AmbientLight(0xffffff, 0.5));
 
 
-// ---------------------------------------------------------
-// TERRAIN (Large Plane)
-// ---------------------------------------------------------
-
+// -----------------------------------------------------
+// TERRAIN
+// -----------------------------------------------------
 const terrainGeo = new THREE.PlaneGeometry(600, 600, 200, 200);
 terrainGeo.rotateX(-Math.PI / 2);
 
@@ -73,63 +73,66 @@ for (let i = 0; i < terrainGeo.attributes.position.count; i++) {
     let x = terrainGeo.attributes.position.getX(i);
     let z = terrainGeo.attributes.position.getZ(i);
 
-    // simple height using sin waves
+    // simple height
     let height =
-        Math.sin(x * 0.02) * 5 +
-        Math.sin(z * 0.02) * 5 +
-        Math.sin(x * 0.04) * 3;
+        Math.sin(x * 0.03) * 4 +
+        Math.sin(z * 0.03) * 4 +
+        Math.sin(x * 0.01) * 2;
 
     terrainGeo.attributes.position.setY(i, height);
 }
 
 terrainGeo.computeVertexNormals();
 
-const terrainMat = new THREE.MeshStandardMaterial({
-    color: 0x228833,
-    flatShading: false
-});
+const terrain = new THREE.Mesh(
+    terrainGeo,
+    new THREE.MeshStandardMaterial({ color: 0x228833 })
+);
 
-const terrain = new THREE.Mesh(terrainGeo, terrainMat);
 terrain.receiveShadow = true;
 scene.add(terrain);
 
 
-// ---------------------------------------------------------
-// A FEW OBJECTS
-// ---------------------------------------------------------
+// -----------------------------------------------------
+// RANDOM BOX OBJECTS
+// -----------------------------------------------------
+const boxGeo = new THREE.BoxGeometry(4, 4, 4);
+const boxMat = new THREE.MeshStandardMaterial({ color: 0xff5555 });
 
-const boxGeo = new THREE.BoxGeometry(5, 5, 5);
-const boxMat = new THREE.MeshStandardMaterial({ color: 0xff4444 });
-
-for (let i = 0; i < 10; i++) {
+for (let i = 0; i < 12; i++) {
     let box = new THREE.Mesh(boxGeo, boxMat);
     box.position.set(
-        Math.random() * 200 - 100,
+        Math.random() * 300 - 150,
         5,
-        Math.random() * 200 - 100
+        Math.random() * 300 - 150
     );
     scene.add(box);
 }
 
 
-// ---------------------------------------------------------
-// PLAYER CONTROLS (Pointer Lock + WASD)
-// ---------------------------------------------------------
+// -----------------------------------------------------
+// PLAYER CONTROLS (Pointer Lock)
+// -----------------------------------------------------
+const controls = new PointerLockControls(camera, document.body);
 
-const controls = new PointerLockControls(camera, renderer.domElement);
+const instructions = document.getElementById("instructions");
 
-document.getElementById("instructions").addEventListener("click", () => {
+instructions.addEventListener("click", () => {
     controls.lock();
 });
 
 controls.addEventListener("lock", () => {
-    document.getElementById("instructions").style.display = "none";
-});
-controls.addEventListener("unlock", () => {
-    document.getElementById("instructions").style.display = "flex";
+    instructions.style.display = "none";
 });
 
-// movement state
+controls.addEventListener("unlock", () => {
+    instructions.style.display = "flex";
+});
+
+
+// -----------------------------------------------------
+// MOVEMENT KEYS
+// -----------------------------------------------------
 const keys = {
     w: false,
     a: false,
@@ -138,30 +141,31 @@ const keys = {
 };
 
 document.addEventListener("keydown", (e) => {
-    if (keys[e.key.toLowerCase()] !== undefined) keys[e.key] = true;
+    if (keys[e.key.toLowerCase()] !== undefined) {
+        keys[e.key.toLowerCase()] = true;
+    }
 });
 
 document.addEventListener("keyup", (e) => {
-    if (keys[e.key.toLowerCase()] !== undefined) keys[e.key] = false;
+    if (keys[e.key.toLowerCase()] !== undefined) {
+        keys[e.key.toLowerCase()] = false;
+    }
 });
 
-// movement speed
-const speed = 0.15;
+const moveSpeed = 0.18;
 
 
-// ---------------------------------------------------------
-// ANIMATION LOOP
-// ---------------------------------------------------------
-
+// -----------------------------------------------------
+// GAME LOOP
+// -----------------------------------------------------
 function animate() {
     requestAnimationFrame(animate);
 
-    // movement
     if (controls.isLocked) {
-        if (keys.w) controls.moveForward(speed);
-        if (keys.s) controls.moveForward(-speed);
-        if (keys.a) controls.moveRight(-speed);
-        if (keys.d) controls.moveRight(speed);
+        if (keys.w) controls.moveForward(moveSpeed);
+        if (keys.s) controls.moveForward(-moveSpeed);
+        if (keys.a) controls.moveRight(-moveSpeed);
+        if (keys.d) controls.moveRight(moveSpeed);
     }
 
     renderer.render(scene, camera);
@@ -170,15 +174,15 @@ function animate() {
 animate();
 
 
-// ---------------------------------------------------------
-// WINDOW RESIZE SUPPORT
-// ---------------------------------------------------------
-
+// -----------------------------------------------------
+// RESIZE HANDLER
+// -----------------------------------------------------
 window.addEventListener("resize", () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
+
 </script>
 
 </body>
