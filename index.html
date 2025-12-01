@@ -1,137 +1,130 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Regina Multiplayer Map</title>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Starlight Coffee Co.</title>
     <style>
         body {
-            background: #eef2f3;
-            font-family: Arial, sans-serif;
-            text-align: center;
             margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background: #f4f4f4;
+            color: #333;
+        }
+
+        header {
+            background: #3c2a21;
+            color: #fff;
             padding: 20px;
+            text-align: center;
         }
 
-        h1 {
-            margin-top: 0;
+        nav {
+            background: #271a13;
+            padding: 10px;
+            text-align: center;
         }
 
-        canvas {
-            border: 2px solid #333;
-            background: #c8e6ff; /* Regina sky */
-            display: block;
-            margin: auto;
+        nav a {
+            color: white;
+            margin: 0 15px;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .hero {
+            background: url('https://images.unsplash.com/photo-1509042239860-f550ce710b93') center/cover no-repeat;
+            height: 350px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            text-shadow: 0 0 10px black;
+            font-size: 2.5rem;
+        }
+
+        .section {
+            padding: 40px;
+            text-align: center;
+        }
+
+        .products {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            width: 250px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        footer {
+            background: #3c2a21;
+            color: #ddd;
+            text-align: center;
+            padding: 15px;
+            margin-top: 40px;
+            font-size: 0.9rem;
+        }
+
+        .warning {
+            font-size: 0.75rem;
+            margin-top: 5px;
+            color: #ffdddd;
         }
     </style>
 </head>
+
 <body>
+    <header>
+        <h1>Starlight Coffee Co.</h1>
+        <p>Crafting Cosmic Coffee for Dreamers & Early Risers</p>
+    </header>
 
-<h1>Regina, Saskatchewan – Multiplayer Map</h1>
-<p>Move with WASD or Arrow Keys. Open in multiple tabs to test.</p>
+    <nav>
+        <a href="#">Home</a>
+        <a href="#">Menu</a>
+        <a href="#">Locations</a>
+        <a href="#">Contact</a>
+    </nav>
 
-<canvas id="gameCanvas" width="900" height="600"></canvas>
+    <div class="hero">
+        Freshly Brewed Inspiration
+    </div>
 
-<!-- Socket.IO auto-loads from your local server -->
-<script src="/socket.io/socket.io.js"></script>
+    <div class="section">
+        <h2>Our Featured Blends</h2>
+        <p>Handcrafted with passion, and maybe a little stardust.</p>
 
-<script>
-/* ---------------------------------------------
-   CONNECT TO SERVER
----------------------------------------------- */
-const socket = io();
+        <div class="products">
+            <div class="card">
+                <h3>Galactic Roast</h3>
+                <p>Bold, rich, and dark like deep space.</p>
+            </div>
 
-/* ---------------------------------------------
-   CANVAS SETUP
----------------------------------------------- */
-const canvas = document.getElementById("gameCanvas");
-const ctx = canvas.getContext("2d");
+            <div class="card">
+                <h3>Supernova Espresso</h3>
+                <p>A blast of energy in every sip.</p>
+            </div>
 
-let players = {};
-let myId = "";
-let speed = 4;
+            <div class="card">
+                <h3>Moonbeam Latte</h3>
+                <p>Soft, sweet, and out-of-this-world smooth.</p>
+            </div>
+        </div>
+    </div>
 
-/* ---------------------------------------------
-   NETWORK EVENTS
----------------------------------------------- */
-socket.on("currentPlayers", (data) => {
-    players = data;
-    myId = socket.id;
-});
-
-socket.on("newPlayer", (player) => {
-    players[player.id] = player;
-});
-
-socket.on("playerDisconnected", (id) => {
-    delete players[id];
-});
-
-socket.on("playerMoved", (player) => {
-    players[player.id] = player;
-});
-
-/* ---------------------------------------------
-   KEYBOARD MOVEMENT
----------------------------------------------- */
-let keys = {};
-document.addEventListener("keydown", (e) => keys[e.key] = true);
-document.addEventListener("keyup", (e) => keys[e.key] = false);
-
-/* ---------------------------------------------
-   DRAW REGINA MAP (simple landmarks)
----------------------------------------------- */
-function drawReginaMap() {
-    // Wascana Lake
-    ctx.fillStyle = "#6ec6ff";
-    ctx.fillRect(200, 150, 500, 250);
-
-    // Legislature Building
-    ctx.fillStyle = "#d4c39a";
-    ctx.fillRect(380, 200, 140, 60);
-
-    // Simple downtown grid
-    ctx.fillStyle = "#bdbdbd";
-    ctx.fillRect(100, 50, 100, 100);
-    ctx.fillRect(250, 50, 100, 100);
-    ctx.fillRect(400, 50, 100, 100);
-}
-
-/* ---------------------------------------------
-   MAIN GAME LOOP
----------------------------------------------- */
-function gameLoop() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    drawReginaMap();
-
-    // Move local player
-    let me = players[myId];
-    if (me) {
-        if (keys["ArrowUp"] || keys["w"]) me.y -= speed;
-        if (keys["ArrowDown"] || keys["s"]) me.y += speed;
-        if (keys["ArrowLeft"] || keys["a"]) me.x -= speed;
-        if (keys["ArrowRight"] || keys["d"]) me.x += speed;
-
-        socket.emit("move", { x: me.x, y: me.y });
-    }
-
-    // Draw players
-    for (let id in players) {
-        let p = players[id];
-        ctx.fillStyle = p.color;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, 10, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.fillStyle = "black";
-        ctx.fillText(p.name, p.x - 15, p.y - 15);
-    }
-
-    requestAnimationFrame(gameLoop);
-}
-
-gameLoop();
-</script>
+    <footer>
+        © 2025 Starlight Coffee Co. All rights reserved.
+        <div class="warning">
+            This is a fictional business created for demonstration purposes.
+        </div>
+    </footer>
 
 </body>
 </html>
