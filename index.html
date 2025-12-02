@@ -3,139 +3,82 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Paws & Whiskers Pet Supply</title>
+    <title>Daily Bible Verse</title>
     <style>
         body {
-            margin: 0;
-            font-family: Arial, Helvetica, sans-serif;
-            background: #fafafa;
-            color: #333;
-        }
-
-        header {
-            background: #ff914d;
-            color: white;
-            padding: 25px;
-            text-align: center;
-        }
-
-        nav {
-            background: #e26c2d;
-            padding: 12px;
-            text-align: center;
-        }
-
-        nav a {
-            color: white;
-            margin: 0 18px;
-            text-decoration: none;
-            font-weight: bold;
-        }
-
-        .hero {
-            background: url('https://images.unsplash.com/photo-1558944351-c7e7b53c4f3a')
-                center/cover no-repeat;
-            height: 330px;
+            font-family: Arial, sans-serif;
+            background: #f0f2f5;
             display: flex;
+            justify-content: center;
             align-items: center;
-            justify-content: center;
-            font-size: 2.4rem;
-            font-weight: bold;
-            color: white;
-            text-shadow: 0 0 10px rgba(0,0,0,0.6);
+            height: 100vh;
+            margin: 0;
         }
-
-        .section {
-            padding: 45px 20px;
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            max-width: 500px;
             text-align: center;
         }
-
-        .grid {
-            display: flex;
-            justify-content: center;
-            gap: 30px;
-            flex-wrap: wrap;
-            margin-top: 25px;
-        }
-
-        .card {
-            background: white;
-            width: 260px;
-            padding: 18px;
-            border-radius: 12px;
-            box-shadow: 0 2px 7px rgba(0,0,0,0.2);
-        }
-
-        .card h3 {
+        h1 {
             margin-top: 0;
         }
-
-        footer {
-            background: #e26c2d;
-            color: #eee;
-            text-align: center;
-            padding: 18px;
-            margin-top: 40px;
-            font-size: 0.9rem;
+        #verse {
+            font-size: 1.2em;
+            margin: 20px 0;
+            font-weight: bold;
         }
-
-        .fake-warning {
-            font-size: 0.7rem;
-            color: #ffe6e6;
+        button {
+            padding: 10px 20px;
+            font-size: 1em;
+            background: #4a6cf7;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #384fc7;
         }
     </style>
 </head>
 <body>
-
-<header>
-    <h1>Paws & Whiskers Pet Supply</h1>
-    <p>Everything Your Furry Friends Need</p>
-</header>
-
-<nav>
-    <a href="#">Home</a>
-    <a href="#">Products</a>
-    <a href="#">Services</a>
-    <a href="#">Contact</a>
-</nav>
-
-<div class="hero">
-    Happy Pets, Happy Homes
-</div>
-
-<div class="section">
-    <h2>Featured Products</h2>
-    <p>Top-quality pet essentials handpicked for your companions.</p>
-
-    <div class="grid">
-        <div class="card">
-            <h3>Premium Dog Food</h3>
-            <p>Nutritious blends for all dog breeds.</p>
-        </div>
-
-        <div class="card">
-            <h3>Cat Climbing Tower</h3>
-            <p>Durable and fun for active cats.</p>
-        </div>
-
-        <div class="card">
-            <h3>Small Animal Bedding</h3>
-            <p>Soft and safe materials for hamsters, rabbits, and more.</p>
-        </div>
-
-        <div class="card">
-            <h3>Tropical Fish Supplies</h3>
-            <p>Aquarium decor, food, and water treatments.</p>
-        </div>
+    <div class="container">
+        <h1>Daily Bible Verse</h1>
+        <p id="verse"></p>
+        <button onclick="generateVerse()">Generate Random Verse</button>
     </div>
-</div>
 
-<footer>
-    © 2025 Paws & Whiskers Pet Supply. All rights reserved.
-    <div class="fake-warning">
-        This is a fictional business created for demonstration purposes.
-    </div>
-</footer>
+    <script>
+        const verses = [
+            "Philippians 4:13 – I can do all things through Christ who strengthens me.",
+            "Psalm 23:1 – The Lord is my shepherd; I shall not want.",
+            "Romans 8:28 – All things work together for good to them that love God.",
+            "Joshua 1:9 – Be strong and courageous. Do not be afraid; God is with you.",
+            "Psalm 46:1 – God is our refuge and strength, a very present help in trouble.",
+            "Proverbs 3:5 – Trust in the Lord with all your heart.",
+            "John 3:16 – For God so loved the world that He gave His only Son.",
+            "Isaiah 41:10 – Fear not, for I am with you.",
+            "Matthew 5:16 – Let your light shine before others.",
+            "Psalm 27:1 – The Lord is my light and my salvation—whom shall I fear?"
+        ];
 
+        // Display daily verse based on the day number
+        function loadDailyVerse() {
+            const today = new Date();
+            const index = today.getDate() % verses.length;
+            document.getElementById("verse").innerText = verses[index];
+        }
+
+        // Generate random verse
+        function generateVerse() {
+            const randomIndex = Math.floor(Math.random() * verses.length);
+            document.getElementById("verse").innerText = verses[randomIndex];
+        }
+
+        loadDailyVerse();
+    </script>
 </body>
 </html>
