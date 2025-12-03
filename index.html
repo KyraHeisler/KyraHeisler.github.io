@@ -1,155 +1,340 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bible Verse Generator</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #f0f2f5;
-            margin: 0;
-            padding: 0;
-        }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Enhanced Bible Verse App</title>
 
-        .container {
-            max-width: 700px;
-            margin: 40px auto;
-            background: white;
-            border-radius: 12px;
-            padding: 30px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-        }
+<style>
+    :root {
+        --bg: #f0f2f5;
+        --text: #222;
+        --panel: #ffffff;
+        --accent: #4a6cf7;
 
-        h1, h2 {
-            text-align: center;
-        }
+        /* dark mode */
+        --bg-dark: #0e1117;
+        --text-dark: #e6e6e6;
+        --panel-dark: #1a1f29;
+    }
 
-        .verse-box {
-            padding: 20px;
-            margin-top: 20px;
-            border-radius: 10px;
-            background: #fafafa;
-            border-left: 5px solid #4a6cf7;
-        }
+    body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        background: var(--bg);
+        color: var(--text);
+        transition: background 0.4s, color 0.4s;
+        background-size: cover;
+        background-position: center;
+    }
 
-        .reference {
-            font-weight: bold;
-            margin-top: 10px;
-        }
+    body.dark {
+        background: var(--bg-dark);
+        color: var(--text-dark);
+    }
 
-        button {
-            margin-top: 25px;
-            padding: 12px 20px;
-            width: 100%;
-            font-size: 16px;
-            background: #4a6cf7;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-        }
+    .container {
+        max-width: 900px;
+        margin: 40px auto;
+        background: var(--panel);
+        padding: 30px;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        transition: background 0.3s, color 0.3s;
+    }
+    body.dark .container {
+        background: var(--panel-dark);
+    }
 
-        button:hover {
-            background: #3c54d6;
-        }
+    .header {
+        text-align: center;
+    }
 
-        .loader {
-            text-align: center;
-            display: none;
-            margin-top: 15px;
-        }
-    </style>
+    .controls {
+        display: flex;
+        justify-content: center;
+        gap: 12px;
+        margin: 20px 0;
+        flex-wrap: wrap;
+    }
+
+    select, button {
+        padding: 10px 15px;
+        border-radius: 8px;
+        border: none;
+        font-size: 16px;
+        cursor: pointer;
+    }
+
+    button {
+        background: var(--accent);
+        color: white;
+    }
+
+    .verse-box {
+        margin-top: 25px;
+        padding: 20px;
+        border-radius: 12px;
+        background: #fafafa;
+        border-left: 5px solid var(--accent);
+    }
+    body.dark .verse-box {
+        background: #2a2f3a;
+    }
+
+    .reference {
+        font-weight: bold;
+        margin-top: 8px;
+    }
+
+    .favorites {
+        margin-top: 40px;
+    }
+
+    .favorite-item {
+        background: #f5f5f5;
+        padding: 12px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+    }
+    body.dark .favorite-item {
+        background: #2e333f;
+    }
+
+    .bg-select {
+        margin-left: 10px;
+    }
+
+    .loader {
+        display: none;
+        text-align: center;
+        margin-top: 20px;
+    }
+</style>
 </head>
 <body>
 
 <div class="container">
-    <h1>Daily Bible Verse</h1>
-
-    <!-- DAILY VERSE -->
-    <div class="verse-box" id="dailyBox">
-        <div id="dailyVerse">Loading daily verse...</div>
-        <div id="dailyRef" class="reference"></div>
+    <div class="header">
+        <h1>Daily Bible Verse</h1>
     </div>
 
-    <!-- RANDOM VERSE BUTTON -->
-    <button onclick="generateRandomVerse()">Generate Random Verse</button>
+    <div class="controls">
+        <select id="translation">
+            <option value="kjv">KJV</option>
+            <option value="niv">NIV</option>
+            <option value="esv">ESV</option>
+            <option value="nkjv">NKJV</option>
+        </select>
+
+        <button onclick="generateRandomVerse()">Random Verse</button>
+        <button onclick="toggleDarkMode()">Dark Mode</button>
+
+        <select id="backgroundSelect" class="bg-select" onchange="changeBackground()">
+            <option value="none">Plain</option>
+            <option value="nature1">Nature</option>
+            <option value="mountains">Mountains</option>
+            <option value="sunset">Sunset</option>
+            <option value="cross">Cross</option>
+        </select>
+    </div>
+
+    <!-- DAILY VERSE -->
+    <div class="verse-box">
+        <h2>Today’s Verse</h2>
+        <div id="dailyVerse">Loading...</div>
+        <div id="dailyRef" class="reference"></div>
+        <button onclick="saveVerse('dailyVerse', 'dailyRef')">Save to Favorites</button>
+        <div id="dailyLang"></div>
+    </div>
 
     <!-- RANDOM VERSE -->
     <div class="verse-box" id="randomBox" style="display:none;">
         <h2>Additional Verse</h2>
         <div id="randomVerse"></div>
         <div id="randomRef" class="reference"></div>
+        <button onclick="saveVerse('randomVerse', 'randomRef')">Save to Favorites</button>
+        <div id="randomLang"></div>
     </div>
 
     <div class="loader" id="loader">Loading...</div>
+
+    <!-- FAVORITES -->
+    <div class="favorites">
+        <h2>Saved Verses</h2>
+        <div id="favoriteList"></div>
+    </div>
 </div>
 
 <script>
-    // Bible structure for random verse picking
-    const bibleStructure = {
-        "Genesis": 50, "Exodus": 40, "Leviticus": 27, "Numbers": 36, "Deuteronomy": 34,
-        "Joshua": 24, "Judges": 21, "Ruth": 4, "1 Samuel": 31, "2 Samuel": 24,
-        "1 Kings": 22, "2 Kings": 25, "1 Chronicles": 29, "2 Chronicles": 36,
-        "Ezra": 10, "Nehemiah": 13, "Esther": 10, "Job": 42, "Psalms": 150,
-        "Proverbs": 31, "Ecclesiastes": 12, "Song of Solomon": 8, "Isaiah": 66,
-        "Jeremiah": 52, "Lamentations": 5, "Ezekiel": 48, "Daniel": 12,
-        "Hosea": 14, "Joel": 3, "Amos": 9, "Obadiah": 1, "Jonah": 4,
-        "Micah": 7, "Nahum": 3, "Habakkuk": 3, "Zephaniah": 3, "Haggai": 2,
-        "Zechariah": 14, "Malachi": 4, "Matthew": 28, "Mark": 16, "Luke": 24,
-        "John": 21, "Acts": 28, "Romans": 16, "1 Corinthians": 16, "2 Corinthians": 13,
-        "Galatians": 6, "Ephesians": 6, "Philippians": 4, "Colossians": 4,
-        "1 Thessalonians": 5, "2 Thessalonians": 3, "1 Timothy": 6, "2 Timothy": 4,
-        "Titus": 3, "Philemon": 1, "Hebrews": 13, "James": 5,
-        "1 Peter": 5, "2 Peter": 3, "1 John": 5, "2 John": 1, "3 John": 1,
-        "Jude": 1, "Revelation": 22
+/* ------------------------------------------------------
+   1. Bible Structure for Random Generation
+------------------------------------------------------ */
+const bibleStructure = {
+    "Genesis": 50, "Exodus": 40, "Leviticus": 27, "Numbers": 36, "Deuteronomy": 34,
+    "Joshua": 24, "Judges": 21, "Ruth": 4, "1 Samuel": 31, "2 Samuel": 24,
+    "1 Kings": 22, "2 Kings": 25, "1 Chronicles": 29, "2 Chronicles": 36,
+    "Ezra": 10, "Nehemiah": 13, "Esther": 10, "Job": 42, "Psalms": 150,
+    "Proverbs": 31, "Ecclesiastes": 12, "Song of Solomon": 8, "Isaiah": 66,
+    "Jeremiah": 52, "Lamentations": 5, "Ezekiel": 48, "Daniel": 12,
+    "Hosea": 14, "Joel": 3, "Amos": 9, "Obadiah": 1, "Jonah": 4,
+    "Micah": 7, "Nahum": 3, "Habakkuk": 3, "Zephaniah": 3, "Haggai": 2,
+    "Zechariah": 14, "Malachi": 4, "Matthew": 28, "Mark": 16, "Luke": 24,
+    "John": 21, "Acts": 28, "Romans": 16, "1 Corinthians": 16, "2 Corinthians": 13,
+    "Galatians": 6, "Ephesians": 6, "Philippians": 4, "Colossians": 4,
+    "1 Thessalonians": 5, "2 Thessalonians": 3, "1 Timothy": 6, "2 Timothy": 4,
+    "Titus": 3, "Philemon": 1, "Hebrews": 13, "James": 5,
+    "1 Peter": 5, "2 Peter": 3, "1 John": 5, "2 John": 1, "3 John": 1,
+    "Jude": 1, "Revelation": 22
+};
+
+/* ------------------------------------------------------
+   2. Background Themes
+------------------------------------------------------ */
+function changeBackground() {
+    const val = document.getElementById("backgroundSelect").value;
+
+    const backgrounds = {
+        none: "",
+        nature1: "url('https://images.unsplash.com/photo-1501785888041-af3ef285b470')",
+        mountains: "url('https://images.unsplash.com/photo-1501785888041-af3ef285b470?fit=crop&w=1400&q=80')",
+        sunset: "url('https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?fit=crop&w=1400&q=80')",
+        cross: "url('https://images.unsplash.com/photo-1526045431048-21c7be1b2a10?fit=crop&w=1400&q=80')"
     };
 
-    function randomReference() {
-        const books = Object.keys(bibleStructure);
-        const book = books[Math.floor(Math.random() * books.length)];
-        const chapter = Math.floor(Math.random() * bibleStructure[book]) + 1;
-        const verse = Math.floor(Math.random() * 30) + 1;
-        return `${book} ${chapter}:${verse}`;
+    document.body.style.backgroundImage = backgrounds[val] || "";
+}
+
+/* ------------------------------------------------------
+   3. Dark Mode
+------------------------------------------------------ */
+function toggleDarkMode() {
+    document.body.classList.toggle("dark");
+}
+
+/* ------------------------------------------------------
+   4. Fetch Verse from API
+------------------------------------------------------ */
+async function fetchVerse(ref, verseId, refId, langId) {
+    document.getElementById("loader").style.display = "block";
+
+    const translation = document.getElementById("translation").value;
+    const url = `https://bible-api.com/${encodeURIComponent(ref)}?translation=${translation}`;
+
+    try {
+        const res = await fetch(url);
+        const data = await res.json();
+
+        document.getElementById(verseId).innerText = data.text.trim();
+        document.getElementById(refId).innerText = data.reference;
+
+        // Hebrew/Greek lexical data (optional)
+        loadLanguageSource(ref, langId);
+
+    } catch {
+        document.getElementById(verseId).innerText = "Verse not found.";
     }
 
-    async function fetchVerse(reference, targetVerseId, targetRefId) {
-        document.getElementById("loader").style.display = "block";
+    document.getElementById("loader").style.display = "none";
+}
 
-        try {
-            const res = await fetch(`https://bible-api.com/${encodeURIComponent(reference)}`);
-            const data = await res.json();
+/* ------------------------------------------------------
+   5. Original Languages (Hebrew/Greek Source Lookup)
+------------------------------------------------------ */
+async function loadLanguageSource(ref, id) {
+    const element = document.getElementById(id);
+    element.innerHTML = "Loading Hebrew/Greek info...";
 
-            document.getElementById(targetVerseId).innerText = data.text.trim();
-            document.getElementById(targetRefId).innerText = data.reference;
-        } catch {
-            document.getElementById(targetVerseId).innerText = "Failed to load verse.";
-        }
+    const API_KEY = "YOUR_BIBLIA_API_KEY"; // you must replace this
 
-        document.getElementById("loader").style.display = "none";
+    // Optional: skip Hebrew/Greek if key not added
+    if (API_KEY === "YOUR_BIBLIA_API_KEY") {
+        element.innerHTML = "(Add API key to enable Hebrew/Greek sources.)";
+        return;
     }
 
-    function loadDailyVerse() {
-        const today = new Date();
-        const seed = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
+    const url = `https://api.biblia.com/v1/bible/parse?passage=${encodeURIComponent(ref)}&key=${API_KEY}`;
 
-        const books = Object.keys(bibleStructure);
-        const book = books[seed % books.length];
-        const chapter = (seed % bibleStructure[book]) + 1;
-        const verse = (seed % 30) + 1;
+    try {
+        const res = await fetch(url);
+        const data = await res.json();
 
-        const reference = `${book} ${chapter}:${verse}`;
-        fetchVerse(reference, "dailyVerse", "dailyRef");
+        element.innerHTML = `<small><b>Original:</b> ${data.tokens[0]?.lemma || "N/A"}</small>`;
+    } catch {
+        element.innerHTML = "(Original language unavailable)";
     }
+}
 
-    function generateRandomVerse() {
-        const reference = randomReference();
-        document.getElementById("randomBox").style.display = "block";
-        fetchVerse(reference, "randomVerse", "randomRef");
+/* ------------------------------------------------------
+   6. Random Verse Generator
+------------------------------------------------------ */
+function randomReference() {
+    const books = Object.keys(bibleStructure);
+    const book = books[Math.floor(Math.random() * books.length)];
+    const chapter = Math.floor(Math.random() * bibleStructure[book]) + 1;
+    const verse = Math.floor(Math.random() * 30) + 1;
+    return `${book} ${chapter}:${verse}`;
+}
+
+function generateRandomVerse() {
+    document.getElementById("randomBox").style.display = "block";
+    const ref = randomReference();
+    fetchVerse(ref, "randomVerse", "randomRef", "randomLang");
+}
+
+/* ------------------------------------------------------
+   7. Daily Verse (Changes only once per day)
+------------------------------------------------------ */
+function loadDailyVerse() {
+    const today = new Date();
+    const seed = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
+    const books = Object.keys(bibleStructure);
+
+    const book = books[seed % books.length];
+    const chapter = (seed % bibleStructure[book]) + 1;
+    const verse = (seed % 30) + 1;
+
+    const ref = `${book} ${chapter}:${verse}`;
+    fetchVerse(ref, "dailyVerse", "dailyRef", "dailyLang");
+}
+
+/* Auto-refresh daily at midnight */
+setInterval(() => {
+    const now = new Date();
+    if (now.getHours() === 0 && now.getMinutes() === 0) {
+        loadDailyVerse();
     }
+}, 60000);
 
-    // Load the daily verse on page load
-    loadDailyVerse();
+/* ------------------------------------------------------
+   8. Favorites (Local Storage)
+------------------------------------------------------ */
+function saveVerse(verseId, refId) {
+    const verse = document.getElementById(verseId).innerText;
+    const reference = document.getElementById(refId).innerText;
+
+    const saved = JSON.parse(localStorage.getItem("favorites") || "[]");
+    saved.push({ verse, reference });
+
+    localStorage.setItem("favorites", JSON.stringify(saved));
+    loadFavorites();
+}
+
+function loadFavorites() {
+    const list = document.getElementById("favoriteList");
+    const saved = JSON.parse(localStorage.getItem("favorites") || "[]");
+
+    list.innerHTML = saved
+        .map(v => `<div class="favorite-item"><b>${v.reference}</b><br>${v.verse}</div>`)
+        .join("");
+}
+
+/* ------------------------------------------------------
+   STARTUP
+------------------------------------------------------ */
+loadDailyVerse();
+loadFavorites();
 </script>
 
 </body>
