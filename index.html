@@ -3,82 +3,146 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Daily Bible Verse</title>
+    <title>Bible Verse Generator</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            background: #f0f2f5;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
             margin: 0;
+            font-family: Arial, sans-serif;
+            display: flex;
+            height: 100vh;
+            background: #f5f7fa;
         }
-        .container {
-            background: white;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-            max-width: 500px;
-            text-align: center;
+        .sidebar {
+            width: 250px;
+            background: #2f3e9e;
+            color: white;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
         }
-        h1 {
+        .sidebar h2 {
             margin-top: 0;
         }
-        #verse {
-            font-size: 1.2em;
-            margin: 20px 0;
-            font-weight: bold;
-        }
-        button {
-            padding: 10px 20px;
-            font-size: 1em;
-            background: #4a6cf7;
-            color: white;
+        .sidebar button {
+            margin-top: 20px;
+            padding: 12px;
             border: none;
-            border-radius: 8px;
+            background: #4f6cff;
+            color: white;
+            border-radius: 6px;
             cursor: pointer;
+            font-size: 16px;
         }
-        button:hover {
-            background: #384fc7;
+        .sidebar button:hover {
+            background: #3c54d6;
+        }
+        .content {
+            flex: 1;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            text-align: center;
+        }
+        #verse {
+            font-size: 1.6em;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        #reference {
+            font-size: 1.2em;
+            margin-top: 10px;
+            color: #333;
+        }
+        .loader {
+            display: none;
+            font-size: 18px;
+            margin-top: 15px;
         }
     </style>
 </head>
 <body>
-    <div class="container">
+
+    <div class="sidebar">
+        <h2>Options</h2>
+        <button onclick="generateRandomVerse()">Generate Random Verse</button>
+        <div class="loader" id="loader">Loading...</div>
+    </div>
+
+    <div class="content">
         <h1>Daily Bible Verse</h1>
-        <p id="verse"></p>
-        <button onclick="generateVerse()">Generate Random Verse</button>
+        <div id="verse">Loading verse...</div>
+        <div id="reference"></div>
     </div>
 
     <script>
-        const verses = [
-            "Philippians 4:13 – I can do all things through Christ who strengthens me.",
-            "Psalm 23:1 – The Lord is my shepherd; I shall not want.",
-            "Romans 8:28 – All things work together for good to them that love God.",
-            "Joshua 1:9 – Be strong and courageous. Do not be afraid; God is with you.",
-            "Psalm 46:1 – God is our refuge and strength, a very present help in trouble.",
-            "Proverbs 3:5 – Trust in the Lord with all your heart.",
-            "John 3:16 – For God so loved the world that He gave His only Son.",
-            "Isaiah 41:10 – Fear not, for I am with you.",
-            "Matthew 5:16 – Let your light shine before others.",
-            "Psalm 27:1 – The Lord is my light and my salvation—whom shall I fear?"
-        ];
+        // ALL 66 Bible Books + Chapters Count (so we can pick any verse)
+        const bibleStructure = {
+            "Genesis": 50, "Exodus": 40, "Leviticus": 27, "Numbers": 36, "Deuteronomy": 34,
+            "Joshua": 24, "Judges": 21, "Ruth": 4, "1 Samuel": 31, "2 Samuel": 24,
+            "1 Kings": 22, "2 Kings": 25, "1 Chronicles": 29, "2 Chronicles": 36, 
+            "Ezra": 10, "Nehemiah": 13, "Esther": 10, "Job": 42, "Psalms": 150, 
+            "Proverbs": 31, "Ecclesiastes": 12, "Song of Solomon": 8, "Isaiah": 66, 
+            "Jeremiah": 52, "Lamentations": 5, "Ezekiel": 48, "Daniel": 12, 
+            "Hosea": 14, "Joel": 3, "Amos": 9, "Obadiah": 1, "Jonah": 4, "Micah": 7,
+            "Nahum": 3, "Habakkuk": 3, "Zephaniah": 3, "Haggai": 2, "Zechariah": 14,
+            "Malachi": 4, "Matthew": 28, "Mark": 16, "Luke": 24, "John": 21,
+            "Acts": 28, "Romans": 16, "1 Corinthians": 16, "2 Corinthians": 13,
+            "Galatians": 6, "Ephesians": 6, "Philippians": 4, "Colossians": 4,
+            "1 Thessalonians": 5, "2 Thessalonians": 3, "1 Timothy": 6, "2 Timothy": 4,
+            "Titus": 3, "Philemon": 1, "Hebrews": 13, "James": 5,
+            "1 Peter": 5, "2 Peter": 3, "1 John": 5, "2 John": 1, "3 John": 1,
+            "Jude": 1, "Revelation": 22
+        };
 
-        // Display daily verse based on the day number
-        function loadDailyVerse() {
-            const today = new Date();
-            const index = today.getDate() % verses.length;
-            document.getElementById("verse").innerText = verses[index];
+        // Generate a random reference anywhere in the Bible
+        function randomReference() {
+            const books = Object.keys(bibleStructure);
+            const book = books[Math.floor(Math.random() * books.length)];
+            const chapter = Math.floor(Math.random() * bibleStructure[book]) + 1;
+            const verse = Math.floor(Math.random() * 30) + 1; // Guess; API handles invalid ones
+            return `${book} ${chapter}:${verse}`;
         }
 
-        // Generate random verse
-        function generateVerse() {
-            const randomIndex = Math.floor(Math.random() * verses.length);
-            document.getElementById("verse").innerText = verses[randomIndex];
+        // Fetch a verse from the API
+        async function fetchVerse(ref) {
+            document.getElementById("loader").style.display = "block";
+
+            try {
+                const res = await fetch(`https://bible-api.com/${encodeURIComponent(ref)}`);
+                const data = await res.json();
+
+                document.getElementById("verse").innerText = data.text.trim();
+                document.getElementById("reference").innerText = data.reference;
+
+            } catch (err) {
+                document.getElementById("verse").innerText = "Failed to load verse.";
+            }
+
+            document.getElementById("loader").style.display = "none";
+        }
+
+        // Daily verse—same every day
+        function loadDailyVerse() {
+            const today = new Date();
+            const seed = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
+            const books = Object.keys(bibleStructure);
+
+            const book = books[seed % books.length];
+            const chapter = (seed % bibleStructure[book]) + 1;
+            const verse = (seed % 30) + 1;
+
+            const ref = `${book} ${chapter}:${verse}`;
+            fetchVerse(ref);
+        }
+
+        // Random verse button
+        function generateRandomVerse() {
+            fetchVerse(randomReference());
         }
 
         loadDailyVerse();
     </script>
+
 </body>
 </html>
